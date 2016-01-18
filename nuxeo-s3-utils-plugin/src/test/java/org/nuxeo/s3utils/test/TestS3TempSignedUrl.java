@@ -67,7 +67,7 @@ import org.nuxeo.s3utils.S3TempSignedURLBuilder;
 @Deploy({ "nuxeo-s3-utils" })
 public class TestS3TempSignedUrl {
 
-    protected static final String TEST_CONF = "aws-test.conf";
+    protected static final String TEST_CONF_FILE = "aws-test.conf";
 
     public static final String TEST_CONF_KEY_NAME_AWS_KEY_ID = "test.aws.key";
 
@@ -93,7 +93,7 @@ public class TestS3TempSignedUrl {
     public void setup() throws Exception {
 
         // Get our local aws-test.conf file and load the properties
-        File file = FileUtils.getResourceFileFromContext(TEST_CONF);
+        File file = FileUtils.getResourceFileFromContext(TEST_CONF_FILE);
         FileInputStream fileInput = new FileInputStream(file);
         Properties props = new Properties();
         props.load(fileInput);
