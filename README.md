@@ -79,6 +79,8 @@ This file calls the bean's API `#{s3utilsHelper.getS3TempSignedUrl(field)}`, pas
   2. Now, add a field (click the "+" button) and set the value to `s3info:s3_object_key`
   3. Last, click the "Select" button to select your widget template (stored in "resources")
 
+!["Custom-Thumbnails"](https://raw.github.com/nuxeo-sandbox/nuxeo-s3-utils/master/doc-img/Studio-widget-setup.jpg)
+
 Now, save, deploy, test. Notice that if `s3info:s3_object_key` is empty, no error is triggered ()the url will be blank).
 
 In the same manner, you could use one of the other APIs of the bean (hard code some value in the xhtml, or add more fields)
