@@ -71,7 +71,7 @@ So, for example, say you want to display an hyperlink to the file, and the objec
 </div>
 ```
 
-This file calls the bean's API `#{s3utilsHelper.getS3TempSignedUrl(field)}`, passing it the value of the widget's `field` property (The label displayed for the link is stored in the `•{widget.label}` property). To easily configure this widget, you should use Nuxeo Studio:
+This file calls the bean's API `#{s3UtilsHelper.getS3TempSignedUrl(field)}`, passing it the value of the widget's `field` property (The label displayed for the link is stored in the `•{widget.label}` property). To easily configure this widget, you should use Nuxeo Studio:
 
 * Import the file in the "Widget Template" part of the "Resources" for your project
 * Then, in a Tab (for example, but could be in a layout), drop a "Widget Template" and set its properties:
