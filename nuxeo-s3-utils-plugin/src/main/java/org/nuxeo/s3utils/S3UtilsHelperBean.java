@@ -25,8 +25,7 @@ import org.jboss.seam.annotations.Name;
 import org.jboss.seam.annotations.Scope;
 
 /**
- * Bean helper containing misc. functions to be called from an .xml file, typically a
- * widget template.
+ * Bean helper containing misc. functions to be called from an .xml file, typically a widget template.
  * <p>
  * Here is an example, where the objectKey is stored in a document, in the "myschema:S3key" field:
  * <p>
@@ -129,12 +128,28 @@ public class S3UtilsHelperBean implements Serializable {
 
         return url;
     }
-    
+
+    /**
+     * Returns true if the given key exists in S3 in the default (set in the configuration) bucket
+     * 
+     * @param objectKey
+     * @return true if the key exist on S3 (in the default bucket)
+     * @since 7.10
+     */
     public boolean existsKey(String objectKey) {
-        
+
         return S3TempSignedURLBuilder.existsKey(objectKey);
     }
-    
+
+    /**
+     * Returns true if the given key exists in S3 in the given bucket (if the bucket is empty, we use the bucket set in
+     * the configuration)
+     * 
+     * @param bucket
+     * @param objectKey
+     * @return true if the key exist on S3 in the given bucket
+     * @since 7.10
+     */
     public boolean existsKey(String bucket, String objectKey) {
         return S3TempSignedURLBuilder.existsKey(bucket, objectKey);
     }
