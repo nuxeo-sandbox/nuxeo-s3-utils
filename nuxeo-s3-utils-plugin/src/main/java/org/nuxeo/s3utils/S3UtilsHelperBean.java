@@ -105,7 +105,7 @@ public class S3UtilsHelperBean implements Serializable {
      * The full call. Return an S3 Temp Signed Url for this key, in this bucket, expiring in he given time, and setting
      * content-type and content-disposition (using the key id, secret key and bucket set in the configuration.)
      * <p>
-     * Default values can apply, see {@link S3TempSignedURLBuilder} (default expiration, default bucket, ...)
+     * Default values can apply, see {@link S3TempSignedURLBuilder} (default duration, default bucket, ...)
      * <p>
      * An empty key just returns an empty URL, not an error, so the bean can be used with values of fields of a document
      * when the field has not yet been set.
@@ -117,17 +117,26 @@ public class S3UtilsHelperBean implements Serializable {
      * @throws IOException
      * @since 7.10
      */
-    public String getS3TempSignedUrl(String bucket, String objectKey, int expireInSeconds, String contentType,
+    public String getS3TempSignedUrl(String bucket, String objectKey, int durationInSeconds, String contentType,
             String contentDisposition) throws IOException {
 
         String url = "";
 
         if (StringUtils.isNotBlank(objectKey)) {
             S3TempSignedURLBuilder builder = new S3TempSignedURLBuilder();
-            url = builder.build(objectKey, objectKey, expireInSeconds, contentDisposition, null);
+            url = builder.build(bucket, objectKey, durationInSeconds, contentDisposition, null);
         }
 
         return url;
+    }
+    
+    public boolean existsKey(String objectKey) {
+        
+        return S3TempSignedURLBuilder.existsKey(objectKey);
+    }
+    
+    public boolean existsKey(String bucket, String objectKey) {
+        return S3TempSignedURLBuilder.existsKey(bucket, objectKey);
     }
 
 }

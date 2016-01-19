@@ -171,6 +171,17 @@ public class TestS3TempSignedUrl {
         assertNull(f);
 
     }
+    
+    @Test
+    public void testExistsKey() throws Exception {
+        
+        boolean exists = S3TempSignedURLBuilder.existsKey(TEST_FILE_KEY);
+        assertTrue(exists);
+        
+        exists = S3TempSignedURLBuilder.existsKey("INVALID-KEY");
+        assertFalse(exists);
+        
+    }
 
     /*
      * The returned file is a temp file. Still, caller should delete it once done dealing with it

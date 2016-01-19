@@ -21,16 +21,22 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.runtime.api.Framework;
 
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.HttpMethod;
-import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 
 /**
  * This class builds a Temporary Signed Url to access a file in a S3 bucket.
@@ -64,9 +70,9 @@ public class S3TempSignedURLBuilder {
 
     public static final int DEFAULT_DURATION = 60 * 20; // 20mn
 
-    private static AWSCredentialsProvider awsCredentialsProvider = null;
+    protected static BasicAWSCredentials awsCredentialsProvider = null;
 
-    protected AmazonS3 s3;
+    protected static AmazonS3 s3;
 
     protected static String awsAccessKeyId = null;
 
@@ -74,33 +80,71 @@ public class S3TempSignedURLBuilder {
 
     protected static String awsBucket = null;
 
+    protected static boolean setupDone = false;
+
     protected static int defaultDuration = -1;
+
+    protected static final long MAX_IN_CACHED_KEYS = 500;
+
+    protected static final long DURATION_IN_CACHE = 600000; // 10 minutes (in milliseconds)
+
+    protected static LinkedHashMap<String, Boolean> cachedKeysAndExist = new LinkedHashMap<String, Boolean>();
+
+    protected static LinkedHashMap<String, Long> cachedKeysAndSince = new LinkedHashMap<String, Long>();
+
+    protected static final String LOCK = "S3TempSignedURLBuilder_lock";
 
     public S3TempSignedURLBuilder() {
 
-        if (StringUtils.isBlank(awsBucket)) {
-            awsBucket = Framework.getProperty(CONF_KEY_NAME_BUCKET);
-            // Having no bucket name in the config is ok if a bucket is passed as argument to buld().
-        }
+        setup();
+    }
 
-        if (defaultDuration < 1) {
-            String durationStr = Framework.getProperty(CONF_KEY_NAME_DURATION);
-            if (StringUtils.isBlank(durationStr)) {
-                defaultDuration = DEFAULT_DURATION;
-            } else {
-                defaultDuration = Integer.parseInt(durationStr);
+    /*
+     * We initialize the static variables, and we do it only once.
+     */
+    protected static void setup() {
+
+        if (!setupDone) {
+            synchronized (LOCK) {
+                if (!setupDone) {
+                    // Do it only once, even if an error occured (so we set it to true now, not at the end)
+                    setupDone = true;
+
+                    awsBucket = Framework.getProperty(CONF_KEY_NAME_BUCKET);
+                    // Having no bucket name in the config is ok if a bucket is passed as argument to buld().
+
+                    String durationStr = Framework.getProperty(CONF_KEY_NAME_DURATION);
+                    if (StringUtils.isBlank(durationStr)) {
+                        defaultDuration = DEFAULT_DURATION;
+                    } else {
+                        defaultDuration = Integer.parseInt(durationStr);
+                    }
+
+                    awsAccessKeyId = Framework.getProperty(CONF_KEY_NAME_ACCESS_KEY);
+                    if (StringUtils.isBlank(awsAccessKeyId)) {
+                        throw new NuxeoException("AWS Access Key (" + CONF_KEY_NAME_BUCKET
+                                + ") is missing in the configuration.");
+                    }
+
+                    awsSecretAccessKey = Framework.getProperty(CONF_KEY_NAME_SECRET_KEY);
+                    if (StringUtils.isBlank(awsAccessKeyId)) {
+                        throw new NuxeoException("AWS Secret Key (" + CONF_KEY_NAME_SECRET_KEY
+                                + ") is missing in the configuration.");
+                    }
+
+                    awsCredentialsProvider = new BasicAWSCredentials(awsAccessKeyId, awsSecretAccessKey);
+                    if (awsCredentialsProvider == null) {
+                        throw new NuxeoException("AWS Access Key ID (" + CONF_KEY_NAME_ACCESS_KEY
+                                + ") and/or Secret Access Key (" + CONF_KEY_NAME_SECRET_KEY
+                                + ") are missing or invalid. Are they correctly set-up in the configuration?");
+
+                    }
+
+                    s3 = new AmazonS3Client(awsCredentialsProvider);
+                }
             }
         }
 
-        buildCredentiaProvider();
-        if (awsCredentialsProvider == null) {
-            throw new NuxeoException("AWS Access Key ID (" + CONF_KEY_NAME_ACCESS_KEY + ") and/or Secret Access Key ("
-                    + CONF_KEY_NAME_SECRET_KEY
-                    + ") are missing or invalid. Are they correctly set-up in the configuration?");
-
-        }
-
-        s3 = new AmazonS3Client(awsCredentialsProvider);
     }
 
     /**
@@ -195,18 +239,108 @@ public class S3TempSignedURLBuilder {
 
     }
 
-    protected void buildCredentiaProvider() {
+    // ==========================================================================================
+    // Handling "key exists", caching values to avoid multiple useless connections to S3
+    // ==========================================================================================
 
-        if (awsCredentialsProvider != null) {
-            return;
+    /*
+     * Returns -1 if the key is not in the cache, 0 if it is in the cache and does not exist on S3, and 1 if it is in
+     * the cache and exists on S3
+     */
+    protected static int existsKeyCheckInCache(String key) {
+
+        int result = -1;
+
+        if (StringUtils.isNotBlank(key)) {
+            Boolean exists = cachedKeysAndExist.get(key);
+            if (exists != null) {
+                Long since = cachedKeysAndSince.get(key);
+                long timeNow = System.currentTimeMillis();
+
+                if ((timeNow - since) >= DURATION_IN_CACHE) {
+                    cachedKeysAndExist.remove(key);
+                    cachedKeysAndSince.remove(key);
+                } else {
+                    result = exists ? 1 : 0;
+                }
+            }
         }
 
-        awsAccessKeyId = Framework.getProperty(CONF_KEY_NAME_ACCESS_KEY);
-        awsSecretAccessKey = Framework.getProperty(CONF_KEY_NAME_SECRET_KEY);
+        return result;
 
-        if (StringUtils.isNotBlank(awsAccessKeyId) && StringUtils.isNotBlank(awsSecretAccessKey)) {
-            awsCredentialsProvider = new SimpleAWSCredentialProvider(awsAccessKeyId, awsSecretAccessKey);
+    }
+
+    protected static void addToCachedKeys(String key, boolean exists) {
+
+        if (StringUtils.isNotBlank(key)) {
+            if (cachedKeysAndExist.size() >= MAX_IN_CACHED_KEYS) {
+                // Delete the first 20
+                String[] keys = new String[20];
+                Iterator<Map.Entry<String, Boolean>> iterator = cachedKeysAndExist.entrySet().iterator();
+                for (int i = 0; i < 20; ++i) {
+                    keys[i] = iterator.next().getKey();
+                }
+
+                for (String oneKey : keys) {
+                    cachedKeysAndExist.remove(oneKey);
+                    cachedKeysAndSince.remove(oneKey);
+                }
+            }
+
+            cachedKeysAndExist.put(key, exists);
+            cachedKeysAndSince.put(key, System.currentTimeMillis());
+
         }
+    }
+
+    public static boolean existsKey(String objectKey) {
+
+        return existsKey(null, objectKey);
+    }
+
+    public static boolean existsKey(String bucket, String objectKey) {
+
+        boolean exists = false;
+
+        if (StringUtils.isNotBlank(objectKey)) {
+
+            // Called from a static method, we must make sure we initialize the misc. values (bucket, s3, ...)
+            setup();
+
+            if (StringUtils.isBlank(bucket)) {
+                bucket = awsBucket;
+            }
+            
+            String bucketAndKey = bucket + objectKey;
+            int inCache = existsKeyCheckInCache(bucketAndKey);
+            if (inCache != -1) {
+                exists = inCache == 1;
+            } else {
+                try {
+                    @SuppressWarnings("unused")
+                    ObjectMetadata metadata = s3.getObjectMetadata(bucket, objectKey);
+                    exists = true;
+                } catch (AmazonClientException e) {
+                    if (!errorIsMissingKey(e)) {
+                        // Something else happened
+                        exists = true;
+                    }
+                }
+
+                addToCachedKeys(bucketAndKey, exists);
+            }
+        }
+
+        return exists;
+    }
+
+    protected static boolean errorIsMissingKey(AmazonClientException e) {
+        if (e instanceof AmazonServiceException) {
+            AmazonServiceException ase = (AmazonServiceException) e;
+            return (ase.getStatusCode() == 404) || "NoSuchKey".equals(ase.getErrorCode())
+                    || "Not Found".equals(e.getMessage());
+        }
+        return false;
     }
 
 }
