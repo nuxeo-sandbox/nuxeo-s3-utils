@@ -2,9 +2,7 @@
 
 This add-on for [Nuxeo](http://www.nuxeo.com) contains utilities for AWS S3
 
-# Features
-
-## Setup
+# Setup
 In order to access your AWS S3, the following properties _must_ be set in the configuration file (nuxeo.conf):
 
 ```
@@ -30,12 +28,14 @@ NOTE: If this value is not set and no duration is passed to some API, an interna
 
 
 
-## Temporary Signed URL
+# Temporary Signed URL
 
 ### The `S3TempSignedURLBuilder` Class 
 The `S3TempSignedURLBuilder` class lets you build a temporary signed URL to an S3 object. As you can see in the JavaDoc and/or in the source, you can get such URL passing just the distant object Key (which is, basiclaly, its relative path). You can also use more parameters: The bucket, the duration (in seconds), the content-type and content-disposition.
 
 Content-Type and Content-Disposition should be used, especially if the distant object has no file extension.
+
+The class also has a utility to test the existence of a key on S3.
 
 
 ### The `s3utilsHelper` Bean
@@ -54,6 +54,10 @@ This bean exposes the following functions to be typically used in an XHTML file:
 
   This is the call with all the parameters. Default values will apply: if `busket` is empty the code uses the busket defined in the configuration, if `duration` is less than 1 the code uses the duration of the configuraiton file or a hard coded duration, and `contentType`and `contentDisposition` can be empty (no default value uses)
   
+* `#{s3UtilsHelper.existsKey("objectKey")` and `#{s3UtilsHelper.existsKey("bucket", "objectKey")`
+  
+  Utility returning `true` if the given object exists in S3. To avoid multiple REST calls to AWS for the same object, the plug-in caches the value for 10 minutes (bucket + object key => exists or not).
+  
 
 
 A typicall use would be a Widget template. This widget would allow the user to download a file from S3, using a temporary signed url to an object whose ID is stored in a field of the current document.
@@ -61,7 +65,10 @@ A typicall use would be a Widget template. This widget would allow the user to d
 So, for example, say you want to display an hyperlink to the file, and the object key is stored in the `s3info:s3_object_key` custom field. You then create the "s3TempSignedHyperLink.xhtml" file with this content:
 
 ```
-<div xmlns:c="http://java.sun.com/jstl/core" xmlns:nxl="http://nuxeo.org/nxforms/layout" xmlns:h="http://java.sun.com/jsf/html" xmlns:nxh="http://nuxeo.org/nxweb/html">
+<div xmlns:c="http://java.sun.com/jstl/core"
+     xmlns:nxl="http://nuxeo.org/nxforms/layout"
+     xmlns:h="http://java.sun.com/jsf/html"
+     xmlns:nxh="http://nuxeo.org/nxweb/html">
 	<c:if test="#{widget.mode != 'edit'}">
 		<h:outputLink value="#{s3UtilsHelper.getS3TempSignedUrl(field)}" target="_blank">#{widget.label}</h:outputLink>
 	</c:if>	 
@@ -84,6 +91,33 @@ This file calls the bean's API `#{s3UtilsHelper.getS3TempSignedUrl(field)}`, pas
 Now, save, deploy, test. Notice that if `s3info:s3_object_key` is empty, no error is triggered ()the url will be blank).
 
 In the same manner, you could use one of the other APIs of the bean (hard code some value in the xhtml, or add more fields)
+
+Here is another example of XHTML that first tests if the object exists. If yes, it outputs a regular link, else, it outputs just the rwax text:
+
+```
+<div
+	xmlns:c="http://java.sun.com/jstl/core"
+	xmlns:nxl="http://nuxeo.org/nxforms/layout"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:nxh="http://nuxeo.org/nxweb/html"
+	xmlns:nxu="http://nuxeo.org/nxweb/util">
+
+	<c:if test="#{widget.mode != 'edit'}">
+		<nxu:set var="existsKey" value="#{s3UtilsHelper.existsKey(field)}">
+			<c:if test="#{existsKey}">
+				<a href="#{s3UtilsHelper.getS3TempSignedUrl('', field, 0, '', 'attachment;')}" download="true">#{widget.label}</a>
+			</c:if>
+			<c:if test="#{!existsKey}">
+				#{field}
+			</c:if>
+		</nxu:set>
+	</c:if>
+
+  	<c:if test="#{widget.mode == 'edit'}">
+		<h:inputText value="#{field}" />
+	</c:if>	
+</div>
+```
 
 # Build and Install
 
