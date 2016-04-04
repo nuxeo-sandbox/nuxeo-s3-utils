@@ -68,18 +68,6 @@ import org.nuxeo.s3utils.S3TempSignedURLBuilder;
 @Deploy({ "nuxeo-s3-utils" })
 public class TestS3TempSignedUrl {
 
-    protected static final String TEST_CONF_FILE = "aws-test.conf";
-
-    public static final String TEST_CONF_KEY_NAME_AWS_KEY_ID = "test.aws.key";
-
-    public static final String TEST_CONF_KEY_NAME_AWS_SECRET = "test.aws.secret";
-
-    public static final String TEST_CONF_KEY_NAME_AWS_S3_BUCKET = "test.aws.s3.bucket";
-
-    public static final String TEST_CONF_KEY_NAME_OBJECT_KEY = "test.object.key";
-
-    public static final String TEST_CONF_KEY_NAME_OBJECT_SIZE = "test.object.size";
-
     protected static String awsKeyId;
 
     protected static String awsSecret;
@@ -90,40 +78,28 @@ public class TestS3TempSignedUrl {
 
     protected static long TEST_FILE_SIZE = -1;
 
-    protected boolean hasLocalConfFile = false;
-
     @Before
     public void setup() throws Exception {
 
-        File file = null;
-        FileInputStream fileInput = null;
-        Properties props = null;
-
-        try {
-            // Get our local aws-test.conf file and load the properties
-            file = FileUtils.getResourceFileFromContext(TEST_CONF_FILE);
-            fileInput = new FileInputStream(file);
-            props = new Properties();
-            props.load(fileInput);
-            fileInput.close();
-
-            // No error, the file is here. Any error now is a "real" error (missing parameter in the file, ...).
-            hasLocalConfFile = true;
-
+        Properties props = ConfigParametersForTest.loadProperties();
+        if (props != null) {
             // Check we do have the keys
             if (StringUtils.isBlank(awsKeyId)) {
-                awsKeyId = props.getProperty(TEST_CONF_KEY_NAME_AWS_KEY_ID);
-                assertTrue("Missing " + TEST_CONF_KEY_NAME_AWS_KEY_ID, StringUtils.isNotBlank(awsKeyId));
+                awsKeyId = props.getProperty(ConfigParametersForTest.TEST_CONF_KEY_NAME_AWS_KEY_ID);
+                assertTrue("Missing " + ConfigParametersForTest.TEST_CONF_KEY_NAME_AWS_KEY_ID,
+                        StringUtils.isNotBlank(awsKeyId));
             }
 
             if (StringUtils.isBlank(awsSecret)) {
-                awsSecret = props.getProperty(TEST_CONF_KEY_NAME_AWS_SECRET);
-                assertTrue("Missing " + TEST_CONF_KEY_NAME_AWS_SECRET, StringUtils.isNotBlank(awsSecret));
+                awsSecret = props.getProperty(ConfigParametersForTest.TEST_CONF_KEY_NAME_AWS_SECRET);
+                assertTrue("Missing " + ConfigParametersForTest.TEST_CONF_KEY_NAME_AWS_SECRET,
+                        StringUtils.isNotBlank(awsSecret));
             }
 
             if (StringUtils.isBlank(awsBucket)) {
-                awsBucket = props.getProperty(TEST_CONF_KEY_NAME_AWS_S3_BUCKET);
-                assertTrue("Missing " + TEST_CONF_KEY_NAME_AWS_S3_BUCKET, StringUtils.isNotBlank(awsBucket));
+                awsBucket = props.getProperty(ConfigParametersForTest.TEST_CONF_KEY_NAME_AWS_S3_BUCKET);
+                assertTrue("Missing " + ConfigParametersForTest.TEST_CONF_KEY_NAME_AWS_S3_BUCKET,
+                        StringUtils.isNotBlank(awsBucket));
             }
 
             Properties systemProps = System.getProperties();
@@ -133,27 +109,25 @@ public class TestS3TempSignedUrl {
 
             // Now the file to test
             if (StringUtils.isBlank(TEST_FILE_KEY)) {
-                TEST_FILE_KEY = props.getProperty(TEST_CONF_KEY_NAME_OBJECT_KEY);
-                assertTrue("Missing " + TEST_CONF_KEY_NAME_OBJECT_KEY, StringUtils.isNotBlank(TEST_FILE_KEY));
+                TEST_FILE_KEY = props.getProperty(ConfigParametersForTest.TEST_CONF_KEY_NAME_OBJECT_KEY);
+                assertTrue("Missing " + ConfigParametersForTest.TEST_CONF_KEY_NAME_OBJECT_KEY,
+                        StringUtils.isNotBlank(TEST_FILE_KEY));
             }
 
             if (TEST_FILE_SIZE == -1) {
-                String sizeStr = props.getProperty(TEST_CONF_KEY_NAME_OBJECT_SIZE);
-                assertTrue("Missing " + TEST_CONF_KEY_NAME_OBJECT_SIZE, StringUtils.isNotBlank(sizeStr));
+                String sizeStr = props.getProperty(ConfigParametersForTest.TEST_CONF_KEY_NAME_OBJECT_SIZE);
+                assertTrue("Missing " + ConfigParametersForTest.TEST_CONF_KEY_NAME_OBJECT_SIZE,
+                        StringUtils.isNotBlank(sizeStr));
                 TEST_FILE_SIZE = Long.parseLong(sizeStr);
             }
-        } catch (Exception e) {
-            hasLocalConfFile = false;
         }
 
     }
 
     @Test
     public void testGetTempSignedUrl() throws Exception {
-        
-        System.out.println("hasLocalConfFile: " + hasLocalConfFile);
 
-        Assume.assumeTrue("No custom configuraiton file => no test", hasLocalConfFile);
+        Assume.assumeTrue("No custom configuraiton file => no test", ConfigParametersForTest.hasLocalConfFile());
 
         S3TempSignedURLBuilder builder = new S3TempSignedURLBuilder();
         String urlStr = builder.build(TEST_FILE_KEY, 0, null, "filename=" + TEST_FILE_KEY);
@@ -175,7 +149,7 @@ public class TestS3TempSignedUrl {
     @Test
     public void testTempSignedUrlShouldFail() throws Exception {
 
-        Assume.assumeTrue("No custom configuraiton file => no test", hasLocalConfFile);
+        Assume.assumeTrue("No custom configuraiton file => no test", ConfigParametersForTest.hasLocalConfFile());
 
         int duration = 2; // 2 seconds, not 20 minutes or whatever S3TempSignedURLBuilder.DEFAULT_EXPIRE is
 
@@ -195,7 +169,7 @@ public class TestS3TempSignedUrl {
     @Test
     public void testExistsKey() throws Exception {
 
-        Assume.assumeTrue("No custom configuraiton file => no test", hasLocalConfFile);
+        Assume.assumeTrue("No custom configuraiton file => no test", ConfigParametersForTest.hasLocalConfFile());
 
         boolean exists = S3TempSignedURLBuilder.existsKey(TEST_FILE_KEY);
         assertTrue(exists);
