@@ -21,24 +21,22 @@ package org.nuxeo.s3utils.test;
 import static org.junit.Assert.*;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.Properties;
+import java.util.UUID;
 
 import org.apache.commons.lang.StringUtils;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.nuxeo.common.utils.FileUtils;
+import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.platform.test.PlatformFeature;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.s3utils.Constants;
-import org.nuxeo.s3utils.S3TempSignedURLBuilder;
+import org.nuxeo.s3utils.S3Handler;
 
 /**
  * Important: To test the feature, we don't want to hard code the AWS keys (since this code could be published on GitHub
@@ -67,7 +65,7 @@ import org.nuxeo.s3utils.S3TempSignedURLBuilder;
 @RunWith(FeaturesRunner.class)
 @Features({ PlatformFeature.class })
 @Deploy({ "nuxeo-s3-utils" })
-public class TestS3TempSignedUrl {
+public class TestS3Handler {
 
     protected static String awsKeyId;
 
@@ -79,10 +77,16 @@ public class TestS3TempSignedUrl {
 
     protected static long TEST_FILE_SIZE = -1;
 
+    protected static S3Handler s3Handler;
+
+    protected static final String FILE_TO_UPLOAD = "Brief.pdf";
+
+    Properties props = null;
+
     @Before
     public void setup() throws Exception {
 
-        Properties props = ConfigParametersForTest.loadProperties();
+        props = ConfigParametersForTest.loadProperties();
         if (props != null) {
             // Check we do have the keys
             if (StringUtils.isBlank(awsKeyId)) {
@@ -121,114 +125,77 @@ public class TestS3TempSignedUrl {
                         StringUtils.isNotBlank(sizeStr));
                 TEST_FILE_SIZE = Long.parseLong(sizeStr);
             }
+
+            s3Handler = new S3Handler(awsKeyId, awsSecret, awsBucket);
         }
 
     }
 
     @Test
-    public void testGetTempSignedUrl() throws Exception {
+    public void testDownloadFile() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", ConfigParametersForTest.hasLocalConfFile());
 
-        S3TempSignedURLBuilder builder = new S3TempSignedURLBuilder();
-        String urlStr = builder.build(TEST_FILE_KEY, 0, null, "filename=" + TEST_FILE_KEY);
-        assertTrue(StringUtils.isNotBlank(urlStr));
+        Blob result = s3Handler.downloadFile(TEST_FILE_KEY, null);
+        assertNotNull(result);
 
-        // We must be able to download the file without authentication
-        File f = downloadFile(urlStr);
-        assertNotNull(f);
-        // Delete it now
-        String name = f.getName();
-        long size = f.length();
-        f.delete();
+        File f = result.getFile();
+        assertTrue(f.exists());
 
+        String name = result.getFilename();
+        long size = result.getLength();
         assertEquals(TEST_FILE_KEY, name);
         assertEquals(TEST_FILE_SIZE, size);
 
     }
 
     @Test
-    public void testTempSignedUrlShouldFail() throws Exception {
+    public void testUploadAndDelete() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", ConfigParametersForTest.hasLocalConfFile());
 
-        int duration = 2; // 2 seconds, not 20 minutes or whatever S3TempSignedURLBuilder.DEFAULT_EXPIRE is
+        String uploadKey = null;
+        uploadKey = props.getProperty(ConfigParametersForTest.TEST_CONF_KEY_NAME_UPLOAD_FILE_KEY);
+        Assume.assumeTrue("No parameter for upload/delet test => no test", StringUtils.isNotBlank(uploadKey));
 
-        S3TempSignedURLBuilder builder = new S3TempSignedURLBuilder();
-        String urlStr = builder.build(TEST_FILE_KEY, duration, null, "filename=" + TEST_FILE_KEY);
-        assertTrue(StringUtils.isNotBlank(urlStr));
+        // Delete in case it already exist from an interrupted previous test
+        try {
+            s3Handler.deleteFile(uploadKey);
+        } catch (Exception e) {
+            // Ignore
+        }
 
-        // Wait for at least the duration
-        Thread.sleep((duration + 1) * 1000);
+        // Create
+        File file = FileUtils.getResourceFileFromContext(FILE_TO_UPLOAD);
+        boolean ok = s3Handler.sendFile(uploadKey, file);
+        assertTrue(ok);
 
-        // Downloading should fail, so the returned File is null
-        File f = downloadFile(urlStr);
-        assertNull(f);
+        // Check exists
+        boolean exists = s3Handler.existsKey(uploadKey);
+        assertTrue(exists);
+
+        // Delete
+        boolean deleted = s3Handler.deleteFile(uploadKey);
+        assertTrue(deleted);
+
+        // Does not exist no more
+        exists = s3Handler.existsKey(uploadKey);
+        assertFalse(exists);
 
     }
 
     @Test
     public void testExistsKey() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", ConfigParametersForTest.hasLocalConfFile());
+        boolean ok;
 
-        boolean exists = S3TempSignedURLBuilder.existsKey(TEST_FILE_KEY);
-        assertTrue(exists);
+        ok = s3Handler.existsKey(TEST_FILE_KEY);
+        assertTrue(ok);
 
-        exists = S3TempSignedURLBuilder.existsKey("INVALID-KEY");
-        assertFalse(exists);
+        String invalid = UUID.randomUUID().toString().replace("-", "") + ".pdf";
+        ok = s3Handler.existsKey(invalid);
+        assertFalse(ok);
 
-    }
-
-    /*
-     * The returned file is a temp file. Still, caller should delete it once done dealing with it
-     */
-    protected File downloadFile(String url) throws IOException {
-
-        File resultFile = null;
-
-        HttpURLConnection http = null;
-        int BUFFER_SIZE = 4096;
-
-        URL theURL = new URL(url);
-
-        http = (HttpURLConnection) theURL.openConnection();
-        // HTTPUtils.addHeaders(http, headers, headersAsJSON);
-
-        if (http.getResponseCode() == HttpURLConnection.HTTP_OK) {
-            String fileName = "";
-            String disposition = http.getHeaderField("Content-Disposition");
-
-            if (disposition != null) {
-                // extracts file name from header field
-                int index = disposition.indexOf("filename=");
-                if (index > -1) {
-                    fileName = disposition.substring(index + 9);
-                }
-            } else {
-                // extracts file name from URL
-                fileName = url.substring(url.lastIndexOf("/") + 1, url.length());
-            }
-            if (StringUtils.isEmpty(fileName)) {
-                fileName = "DownloadedFile-" + java.util.UUID.randomUUID().toString();
-            }
-
-            String tempDir = System.getProperty("java.io.tmpdir");
-            resultFile = new File(tempDir, fileName);
-
-            FileOutputStream outputStream = new FileOutputStream(resultFile);
-            InputStream inputStream = http.getInputStream();
-            int bytesRead = -1;
-            byte[] buffer = new byte[BUFFER_SIZE];
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                outputStream.write(buffer, 0, bytesRead);
-            }
-
-            outputStream.close();
-            inputStream.close();
-        }
-
-        return resultFile;
     }
 
 }

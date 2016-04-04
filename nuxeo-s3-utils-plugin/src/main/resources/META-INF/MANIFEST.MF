@@ -7,5 +7,5 @@ Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Bundle-ManifestVersion: 2
 Bundle-Vendor: Nuxeo
-Nuxeo-Component: OSGI-INF/s3-utils.xml
+Nuxeo-Component: OSGI-INF/s3-utils-operations.xml
 

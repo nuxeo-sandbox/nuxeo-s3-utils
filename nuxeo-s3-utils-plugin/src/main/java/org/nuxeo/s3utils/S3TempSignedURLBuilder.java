@@ -1,26 +1,24 @@
 /*
- * (C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and contributors.
+ * (C) Copyright 2016 Nuxeo SA (http://nuxeo.com/) and others.
  *
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the GNU Lesser General Public License
- * (LGPL) version 2.1 which accompanies this distribution, and is available at
- * http://www.gnu.org/licenses/lgpl-2.1.html
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * Lesser General Public License for more details.
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  * Contributors:
- *     Thibaud Arguillere
+ *     Thiabud Arguillere
  */
 package org.nuxeo.s3utils;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -29,14 +27,7 @@ import org.apache.commons.lang.StringUtils;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.runtime.api.Framework;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.HttpMethod;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 
 /**
  * This class builds a Temporary Signed Url to access a file in a S3 bucket.
@@ -60,23 +51,9 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
  */
 public class S3TempSignedURLBuilder {
 
-    public static final String CONF_KEY_NAME_ACCESS_KEY = "nuxeo.aws.s3utils.keyid";
-
-    public static final String CONF_KEY_NAME_SECRET_KEY = "nuxeo.aws.s3utils.secret";
-
-    public static final String CONF_KEY_NAME_BUCKET = "nuxeo.aws.s3utils.bucket";
-
-    public static final String CONF_KEY_NAME_DURATION = "nuxeo.aws.s3utils.duration";
-
     public static final int DEFAULT_DURATION = 60 * 20; // 20mn
 
     protected static BasicAWSCredentials awsCredentialsProvider = null;
-
-    protected static AmazonS3 s3;
-
-    protected static String awsAccessKeyId = null;
-
-    protected static String awsSecretAccessKey = null;
 
     protected static String awsBucket = null;
 
@@ -94,6 +71,8 @@ public class S3TempSignedURLBuilder {
 
     protected static final String LOCK = "S3TempSignedURLBuilder_lock";
 
+    protected static S3Handler s3Handler = null;;
+
     public S3TempSignedURLBuilder() {
 
         setup();
@@ -110,37 +89,29 @@ public class S3TempSignedURLBuilder {
                     // Do it only once, even if an error occured (so we set it to true now, not at the end)
                     setupDone = true;
 
-                    awsBucket = Framework.getProperty(CONF_KEY_NAME_BUCKET);
-                    // Having no bucket name in the config is ok if a bucket is passed as argument to buld().
+                    awsBucket = Framework.getProperty(Constants.CONF_KEY_NAME_BUCKET);
+                    // Having no bucket name in the config is ok if a bucket is passed as argument to build().
 
-                    String durationStr = Framework.getProperty(CONF_KEY_NAME_DURATION);
+                    String durationStr = Framework.getProperty(Constants.CONF_KEY_NAME_DURATION);
                     if (StringUtils.isBlank(durationStr)) {
                         defaultDuration = DEFAULT_DURATION;
                     } else {
                         defaultDuration = Integer.parseInt(durationStr);
                     }
 
-                    awsAccessKeyId = Framework.getProperty(CONF_KEY_NAME_ACCESS_KEY);
+                    String awsAccessKeyId = Framework.getProperty(Constants.CONF_KEY_NAME_ACCESS_KEY);
                     if (StringUtils.isBlank(awsAccessKeyId)) {
-                        throw new NuxeoException("AWS Access Key (" + CONF_KEY_NAME_BUCKET
+                        throw new NuxeoException("AWS Access Key (" + Constants.CONF_KEY_NAME_BUCKET
                                 + ") is missing in the configuration.");
                     }
 
-                    awsSecretAccessKey = Framework.getProperty(CONF_KEY_NAME_SECRET_KEY);
+                    String awsSecretAccessKey = Framework.getProperty(Constants.CONF_KEY_NAME_SECRET_KEY);
                     if (StringUtils.isBlank(awsAccessKeyId)) {
-                        throw new NuxeoException("AWS Secret Key (" + CONF_KEY_NAME_SECRET_KEY
+                        throw new NuxeoException("AWS Secret Key (" + Constants.CONF_KEY_NAME_SECRET_KEY
                                 + ") is missing in the configuration.");
                     }
 
-                    awsCredentialsProvider = new BasicAWSCredentials(awsAccessKeyId, awsSecretAccessKey);
-                    if (awsCredentialsProvider == null) {
-                        throw new NuxeoException("AWS Access Key ID (" + CONF_KEY_NAME_ACCESS_KEY
-                                + ") and/or Secret Access Key (" + CONF_KEY_NAME_SECRET_KEY
-                                + ") are missing or invalid. Are they correctly set-up in the configuration?");
-
-                    }
-
-                    s3 = new AmazonS3Client(awsCredentialsProvider);
+                    s3Handler = new S3Handler(awsAccessKeyId, awsSecretAccessKey, awsBucket);
                 }
             }
         }
@@ -177,35 +148,13 @@ public class S3TempSignedURLBuilder {
         if (StringUtils.isBlank(bucket)) {
             bucket = awsBucket;
         }
-        if (StringUtils.isBlank(bucket)) {
-            throw new NuxeoException("No bucket provided, and configuration key " + CONF_KEY_NAME_BUCKET
-                    + " is missing.");
-        }
 
-        Date expiration = new Date();
         if (durationInSeconds < 1) {
             durationInSeconds = defaultDuration;
         }
-        expiration.setTime(expiration.getTime() + (durationInSeconds * 1000));
 
-        GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucket, objectKey, HttpMethod.GET);
-
-        if (StringUtils.isNotBlank(contentType)) {
-            request.addRequestParameter("response-content-type", contentType);
-        }
-        if (StringUtils.isNotBlank(contentDisposition)) {
-            request.addRequestParameter("response-content-disposition", contentDisposition);
-        }
-
-        request.setExpiration(expiration);
-        URL url = s3.generatePresignedUrl(request);
-
-        try {
-            URI uri = url.toURI();
-            return uri.toString();
-        } catch (URISyntaxException e) {
-            throw new IOException(e);
-        }
+        s3Handler.setBucket(bucket);
+        return s3Handler.buildPresignedUrl(objectKey, durationInSeconds, contentType, contentDisposition);
 
     }
 
@@ -310,37 +259,19 @@ public class S3TempSignedURLBuilder {
             if (StringUtils.isBlank(bucket)) {
                 bucket = awsBucket;
             }
-            
+
             String bucketAndKey = bucket + objectKey;
             int inCache = existsKeyCheckInCache(bucketAndKey);
             if (inCache != -1) {
                 exists = inCache == 1;
             } else {
-                try {
-                    @SuppressWarnings("unused")
-                    ObjectMetadata metadata = s3.getObjectMetadata(bucket, objectKey);
-                    exists = true;
-                } catch (AmazonClientException e) {
-                    if (!errorIsMissingKey(e)) {
-                        // Something else happened
-                        exists = true;
-                    }
-                }
-
+                s3Handler.setBucket(bucket);
+                exists = s3Handler.existsKey(objectKey);
                 addToCachedKeys(bucketAndKey, exists);
             }
         }
 
         return exists;
-    }
-
-    protected static boolean errorIsMissingKey(AmazonClientException e) {
-        if (e instanceof AmazonServiceException) {
-            AmazonServiceException ase = (AmazonServiceException) e;
-            return (ase.getStatusCode() == 404) || "NoSuchKey".equals(ase.getErrorCode())
-                    || "Not Found".equals(e.getMessage());
-        }
-        return false;
     }
 
 }

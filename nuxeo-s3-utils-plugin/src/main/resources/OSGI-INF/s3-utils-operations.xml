@@ -1,0 +1,10 @@
+<component name="org.nuxeo.s3-utils.operations">
+
+  <extension target="org.nuxeo.ecm.core.operation.OperationServiceComponent"
+		point="operations">
+		<operation class="org.nuxeo.s3utils.operations.S3DownloadOp" />
+		<operation class="org.nuxeo.s3utils.operations.S3UploadOp" />
+	</extension>
+
+</component>
+

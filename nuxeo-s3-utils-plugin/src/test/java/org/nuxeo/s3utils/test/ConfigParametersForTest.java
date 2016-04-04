@@ -14,13 +14,12 @@
  * limitations under the License.
  *
  * Contributors:
- *     thibaud
+ *     Thiabud Arguillere
  */
 package org.nuxeo.s3utils.test;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Properties;
 
@@ -43,10 +42,12 @@ public class ConfigParametersForTest {
 
     public static final String TEST_CONF_KEY_NAME_OBJECT_SIZE = "test.object.size";
 
+    public static final String TEST_CONF_KEY_NAME_UPLOAD_FILE_KEY = "test.upload.file.key";
+
     private static Properties props = null;
-    
+
     private static int status = -1;
-    
+
     /**
      * Returns the Properties after loading the local configuration file.
      * <p>
@@ -58,8 +59,8 @@ public class ConfigParametersForTest {
      * @since 8.1
      */
     public static Properties loadProperties() {
-        
-        if(status > -1) {
+
+        if (status > -1) {
             return props;
         }
 
@@ -89,7 +90,7 @@ public class ConfigParametersForTest {
 
         return props;
     }
-    
+
     public static boolean hasLocalConfFile() {
         return loadProperties() != null;
     }
