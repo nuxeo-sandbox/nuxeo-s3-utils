@@ -187,6 +187,8 @@ public class TestS3Handler {
     @Test
     public void testExistsKey() throws Exception {
 
+        Assume.assumeTrue("No custom configuration file => no test", ConfigParametersForTest.hasLocalConfFile());
+
         boolean ok;
 
         ok = s3Handler.existsKey(TEST_FILE_KEY);
