@@ -16,7 +16,7 @@ You can also set a bucket name, that will be the default bucket, used when, in s
 nuxeo.aws.s3utils.bucket=HERE_THE_BUCKET
 ```
 
-Last, you cans etup a default duration, in seconds, for the URL:
+Last, you can setup a default duration, in seconds, for the "Temporary Signed URL" feature":
 
 ```
 # One hour:
