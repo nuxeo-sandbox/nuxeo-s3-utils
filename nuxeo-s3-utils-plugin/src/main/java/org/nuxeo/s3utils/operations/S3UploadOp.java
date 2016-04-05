@@ -48,7 +48,7 @@ public class S3UploadOp {
     @Param(name = "key", required = true)
     protected String key;
 
-    @Param(name = "xpath", required = true, values = { "file:content" })
+    @Param(name = "xpath", required = false, values = { "file:content" })
     protected String xpath;
 
     @OperationMethod
