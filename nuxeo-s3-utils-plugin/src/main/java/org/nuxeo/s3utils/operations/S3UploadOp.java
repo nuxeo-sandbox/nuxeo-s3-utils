@@ -73,14 +73,9 @@ public class S3UploadOp {
             if (StringUtils.isBlank(xpath)) {
                 xpath = "file:content";
             }
-
-            S3Handler s3Handler = new S3Handler();
-            if (StringUtils.isNotBlank(bucket)) {
-                s3Handler.setBucket(bucket);
-            }
-
+            
             Blob b = (Blob) input.getPropertyValue(xpath);
-            /* boolean ignore = */s3Handler.sendFile(key, b.getFile());
+            run(b);
 
         }
         return input;
