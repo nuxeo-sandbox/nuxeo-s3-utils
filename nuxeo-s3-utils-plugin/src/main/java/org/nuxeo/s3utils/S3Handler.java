@@ -43,6 +43,8 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 
 /**
+ * Wrapper class around AmazonS3
+ * 
  * @since 8.1
  */
 public class S3Handler {
@@ -91,6 +93,8 @@ public class S3Handler {
     }
 
     /**
+     * Allows to change the bucket (for the same account)
+     * 
      * @param inBucket
      * @since 8.1
      */
@@ -99,7 +103,9 @@ public class S3Handler {
     }
 
     /**
-     * @return
+     * Return the {@link AmazonS3} object
+     * 
+     * @return the AmazonS3 object
      * @since 8.1
      */
     public AmazonS3 getS3() {
