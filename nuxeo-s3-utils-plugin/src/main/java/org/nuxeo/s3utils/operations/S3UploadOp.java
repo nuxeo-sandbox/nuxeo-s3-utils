@@ -31,13 +31,13 @@ import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.s3utils.S3Handler;
 
 /**
- * Upload the blob to s3. Uses the bucket or the one set in the configuration.
+ * Upload the blob to s3. Uses the bucket or the one set in the configuration. Returns the input unchanged.
  * <p>
- * The key is requied, it gives the path where the blob must be stored.
+ * The key is required, it gives the path where the blob must be stored.
  * 
  * @since 8.1
  */
-@Operation(id = S3UploadOp.ID, category = Constants.CAT_BLOB, label = "S3 Utils: Upload", description = "Uploads the blob to S3 using the bucket (default value read in the configuration) and the key. If the input is a document, the xpath can be passed to let the operation now where to read the blob from.")
+@Operation(id = S3UploadOp.ID, category = Constants.CAT_BLOB, label = "S3 Utils: Upload", description = "Uploads the blob to S3 using the bucket (default value read in the configuration) and the key. Returns the input unchanged. If the input is a document, the xpath can be passed to let the operation now where to read the blob from.")
 public class S3UploadOp {
 
     public static final String ID = "S3Utils.Upload";
