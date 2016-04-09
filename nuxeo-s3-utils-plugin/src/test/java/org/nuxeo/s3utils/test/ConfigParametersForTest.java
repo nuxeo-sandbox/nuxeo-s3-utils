@@ -71,7 +71,6 @@ public class ConfigParametersForTest {
             fileInput = new FileInputStream(file);
             props = new Properties();
             props.load(fileInput);
-            fileInput.close();
 
             status = 1;
 
@@ -85,6 +84,7 @@ public class ConfigParametersForTest {
                 } catch (IOException e) {
                     // Ignore
                 }
+                fileInput = null;
             }
         }
 
