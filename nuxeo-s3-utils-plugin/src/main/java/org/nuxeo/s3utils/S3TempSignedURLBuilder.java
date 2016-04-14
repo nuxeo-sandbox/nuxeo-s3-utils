@@ -111,7 +111,8 @@ public class S3TempSignedURLBuilder {
                                 + ") is missing in the configuration.");
                     }
 
-                    s3Handler = new S3Handler(awsAccessKeyId, awsSecretAccessKey, awsBucket);
+                    MUST FAIL: GET THE CORRECT S3HANDLER TO USE FROM THE SERVICE
+                    s3Handler = new S3HandlerImpl(awsAccessKeyId, awsSecretAccessKey, awsBucket);
                 }
             }
         }

@@ -49,6 +49,7 @@ public class S3DownloadOp {
         
         Blob result = null;
         
+        GET THE S23HANDLER FROM THE SERVICE
         S3Handler s3Handler = new S3Handler();
         if(StringUtils.isNotBlank(bucket)) {
             s3Handler.setBucket(bucket);

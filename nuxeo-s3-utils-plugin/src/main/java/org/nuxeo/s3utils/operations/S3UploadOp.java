@@ -55,6 +55,7 @@ public class S3UploadOp {
     public Blob run(Blob input) throws NuxeoException, IOException {
 
         if (input != null) {
+            GET THE S23HANDLER FROM THE SERVICE
             S3Handler s3Handler = new S3Handler();
             if (StringUtils.isNotBlank(bucket)) {
                 s3Handler.setBucket(bucket);
