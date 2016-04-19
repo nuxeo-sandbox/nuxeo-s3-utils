@@ -14,26 +14,15 @@
  * limitations under the License.
  *
  * Contributors:
- *     Thibaud Arguillere
+ *     thibaud
  */
 package org.nuxeo.s3utils;
 
 /**
  * 
- * @since 8.1
+ * @since 8.2
  */
-public class Constants {
-    
-    public static final String DEFAULT_HANDLER_NAME = "default";
+public interface S3HandlerService {
 
-    public static final String CONF_KEY_NAME_ACCESS_KEY = "nuxeo.aws.s3utils.keyid";
-
-    public static final String CONF_KEY_NAME_SECRET_KEY = "nuxeo.aws.s3utils.secret";
-
-    public static final String CONF_KEY_NAME_BUCKET = "nuxeo.aws.s3utils.bucket";
-
-    public static final String CONF_KEY_NAME_DURATION = "nuxeo.aws.s3utils.duration";
-    
-    public static final int DEFAULT_SIGNED_URL_DIRATION = 3600;
-
+    public S3Handler getS3Handler(String name);
 }

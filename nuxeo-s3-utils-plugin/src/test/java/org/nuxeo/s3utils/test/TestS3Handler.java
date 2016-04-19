@@ -37,6 +37,9 @@ import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.s3utils.Constants;
 import org.nuxeo.s3utils.S3Handler;
+import org.nuxeo.s3utils.S3HandlerServiceImpl;
+
+import com.google.inject.Inject;
 
 /**
  * Important: To test the feature, we don't want to hard code the AWS keys (since this code could be published on GitHub
@@ -63,7 +66,7 @@ import org.nuxeo.s3utils.S3Handler;
  * @since 7.10
  */
 @RunWith(FeaturesRunner.class)
-@Features({ PlatformFeature.class })
+@Features({ PlatformFeature.class, SimpleFeatureCustom.class })
 @Deploy({ "nuxeo-s3-utils" })
 public class TestS3Handler {
 
@@ -82,10 +85,14 @@ public class TestS3Handler {
     protected static final String FILE_TO_UPLOAD = "Brief.pdf";
 
     Properties props = null;
+    
+    @Inject
+    protected S3HandlerServiceImpl s3HandlerService;
 
     @Before
     public void setup() throws Exception {
 
+        /*
         props = ConfigParametersForTest.loadProperties();
         if (props != null) {
             // Check we do have the keys
@@ -126,7 +133,13 @@ public class TestS3Handler {
                 TEST_FILE_SIZE = Long.parseLong(sizeStr);
             }
 
-            s3Handler = new S3Handler(awsKeyId, awsSecret, awsBucket);
+            //s3Handler = new S3Handler(awsKeyId, awsSecret, awsBucket);
+            s3Handler = s3HandlerService.getS3Handler(Constants.DEFAULT_HANDLER_NAME);
+        }
+        */
+        
+        if(SimpleFeatureCustom.hasLocalTestConfiguration()) {
+            s3Handler = s3HandlerService.getS3Handler(Constants.DEFAULT_HANDLER_NAME);
         }
 
     }
@@ -134,7 +147,7 @@ public class TestS3Handler {
     @Test
     public void testDownloadFile() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", ConfigParametersForTest.hasLocalConfFile());
+        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
 
         Blob result = s3Handler.downloadFile(TEST_FILE_KEY, null);
         assertNotNull(result);

@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<component name="org.nuxeo.s3utils.default">
+
+	<require>org.nuxeo.s3utils.service</require>
+
+	<extension target="org.nuxeo.s3utils.service" point="configuration">
+		<s3Handler name="default">
+			<class>org.nuxeo.s3utils.S3HandlerImpl</class>
+			<awsKey>${nuxeo.aws.s3utils.keyid:=}</awsKey>
+			<awsSecret>${nuxeo.aws.s3utils.secret:=}</awsSecret>
+			<bucket>${nuxeo.aws.s3utils.bucket:=}</bucket>
+			<tempSignedUrlDuration>${nuxeo.aws.s3utils.duration:=}
+			</tempSignedUrlDuration>
+		</s3Handler>
+	</extension>
+
+</component>

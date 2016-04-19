@@ -18,38 +18,72 @@
  */
 package org.nuxeo.s3utils;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.nuxeo.common.xmap.annotation.XNode;
-import org.nuxeo.common.xmap.annotation.XNodeMap;
+//import org.nuxeo.common.xmap.annotation.XNodeMap;
 import org.nuxeo.common.xmap.annotation.XObject;
 
 /**
- * 
- * @since TODO
+ * @since 8.1
  */
-@XObject("configuration")
+@XObject("s3Handler")
 public class S3HandlerDescriptor {
-    
+
     @XNode("name")
-    public String name = "";
+    protected String name = "";
 
     @XNode("class")
-    public Class<?> klass;
+    protected Class<?> klass;
+
+    @XNode("awsKey")
+    protected String awsKey = "";
+
+    @XNode("awsSecret")
+    protected String awsSecret = "";
+
+    @XNode("bucket")
+    protected String bucket = "";
+
+    @XNode("tempSignedUrlDuration")
+    protected String tempSignedUrlDuration = "";
     
-    @XNodeMap(value = "property", key = "@name", type = HashMap.class, componentType = String.class)
-    public Map<String, String> properties = new HashMap<String, String>();
-    
-    public S3HandlerDescriptor() {
-        
+    protected int signedUrlDuration = -1;
+
+    public String getName() {
+        return name;
+    }
+
+    public Class<?> getKlass() {
+        return klass;
+    }
+
+    public String getAwsKey() {
+        return awsKey;
+    }
+
+    public String getAwsSecret() {
+        return awsSecret;
+    }
+
+    public String getBucket() {
+        return bucket;
+    }
+
+    public int getTempSignedUrlDuration() {
+        if(signedUrlDuration == -1) {
+            if(!tempSignedUrlDuration.isEmpty()) {
+                try {
+                    signedUrlDuration = (int) Long.parseLong(tempSignedUrlDuration);
+                } catch (NumberFormatException e) {
+                    signedUrlDuration = -1;
+                }
+                if(signedUrlDuration < 0) {
+                    signedUrlDuration = Constants.DEFAULT_SIGNED_URL_DIRATION;
+                }
+            }
+        }
+        return signedUrlDuration;
     }
     
-    /** Copy constructor. */
-    public S3HandlerDescriptor(S3HandlerDescriptor other) {
-        name = other.name;
-        //klass = other.klass;
-        properties = new HashMap<String, String>(other.properties);
-    }
+    
 
 }

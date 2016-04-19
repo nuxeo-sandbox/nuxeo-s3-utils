@@ -28,18 +28,37 @@ import org.nuxeo.runtime.model.DefaultComponent;
 
 /**
  * 
- * @since TODO
+ * @since 8.2
  */
-public class S3HandlerServiceImpl extends DefaultComponent {
+public class S3HandlerServiceImpl extends DefaultComponent implements S3HandlerService {
 
     protected static final String XP = "configuration";
     
     protected HashMap<String, S3HandlerDescriptor> contributions = new HashMap<String, S3HandlerDescriptor>();
     protected HashMap<String, S3Handler> s3Handlers = new HashMap<String, S3Handler>();
     
+    /**
+     * Component activated notification.
+     * Called when the component is activated. All component dependencies are resolved at that moment.
+     * Use this method to initialize the component.
+     *
+     * @param context the component context.
+     */
+    @Override
+    public void activate(ComponentContext context) {
+        super.activate(context);
+    }
+    
+    /**
+     * Component deactivated notification.
+     * Called before a component is unregistered.
+     * Use this method to do cleanup if any and free any resources held by the component.
+     *
+     * @param context the component context.
+     */
     @Override
     public void deactivate(ComponentContext context) {
-
+        super.activate(context);
         contributions.clear();
     }
     
@@ -67,7 +86,7 @@ public class S3HandlerServiceImpl extends DefaultComponent {
     
     protected void registerS3Handler(S3HandlerDescriptor desc) {
         contributions.put(desc.name, desc);
-        // lookup now to have immediate feedback on eror
+        // lookup now to have immediate feedback on error
         getS3Handler(desc.name);
     }
     
@@ -75,6 +94,14 @@ public class S3HandlerServiceImpl extends DefaultComponent {
         contributions.remove(desc.name);
     }
     
+    /**
+     * Returns the S3Handler given it's name. Returns <code>null</code> if not found.
+     * 
+     * @param name
+     * @return the contributed S3Handler
+     * @since 8.2
+     */
+    @Override
     public synchronized S3Handler getS3Handler(String name) {
         
         S3Handler handler = (S3Handler) s3Handlers.get(name);
@@ -85,20 +112,19 @@ public class S3HandlerServiceImpl extends DefaultComponent {
                 return null;
             }
             Class<?> klass = desc.klass;
-            Map<String, String> properties = desc.properties;
             try {
                 if (S3Handler.class.isAssignableFrom(klass)) {
                     @SuppressWarnings("unchecked")
                     Class<? extends S3Handler> s3HandlerClass = (Class<? extends S3Handler>) klass;
                     handler = s3HandlerClass.newInstance();
                 } else {
-                    throw new RuntimeException("Unknown class for blob provider: " + klass);
+                    throw new RuntimeException("Unknown class for S3Handler: " + klass);
                 }
             } catch (ReflectiveOperationException e) {
                 throw new RuntimeException(e);
             }
             try {
-                handler.initialize(name, properties);
+                handler.initialize(desc);
             } catch(NuxeoException e) {
                 throw new RuntimeException(e);
             }

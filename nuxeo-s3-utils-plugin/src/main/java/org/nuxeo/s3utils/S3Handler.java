@@ -34,7 +34,7 @@ import com.amazonaws.services.s3.AmazonS3;
  */
 public interface S3Handler {
     
-    public void initialize(String name, Map<String, String> properties) throws NuxeoException;
+    public void initialize(S3HandlerDescriptor desc) throws NuxeoException;
 
     public void setBucket(String inBucket);
 

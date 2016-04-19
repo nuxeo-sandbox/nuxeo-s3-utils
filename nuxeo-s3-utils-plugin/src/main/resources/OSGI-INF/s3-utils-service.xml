@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<component name="org.nuxeo.s3-utils.service">
+<component name="org.nuxeo.s3utils.service">
 
   <documentation>
     Dispatch the handling to the appropriate S3Handler.
@@ -8,7 +8,7 @@
   <implementation class="org.nuxeo.s3utils.S3HandlerServiceImpl" />
 
   <service>
-    <provide interface=org.nuxeo.s3utils.S3HandlerService" />
+    <provide interface="org.nuxeo.s3utils.S3HandlerService" />
   </service>
 
   <extension-point name="configuration">

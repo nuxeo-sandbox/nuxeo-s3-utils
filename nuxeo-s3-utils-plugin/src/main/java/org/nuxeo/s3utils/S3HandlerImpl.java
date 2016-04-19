@@ -49,6 +49,8 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
  * @since 8.1
  */
 public class S3HandlerImpl implements S3Handler{
+    
+    protected String name;
 
     protected String awsAccessKeyId;
 
@@ -56,34 +58,26 @@ public class S3HandlerImpl implements S3Handler{
 
     protected String bucket;
 
+    protected int signedUrlDuration;
+
     protected static AmazonS3 s3;
     
-    protected String name;
-    
-    Map<String, String> properties;
-    
     @Override
-    public void initialize(String name, Map<String, String> properties) throws NuxeoException {
-        this.name = name;
-        this.properties = properties;
+    public void initialize(S3HandlerDescriptor desc) throws NuxeoException {
+        
+        this.name = desc.getName();
+        this.awsAccessKeyId = desc.getAwsKey();
+        this.awsSecretAccessKey = desc.getAwsSecret();
+        this.bucket = desc.getBucket();
+        this.signedUrlDuration = desc.getTempSignedUrlDuration();
+
+        setup();
     }
 
     /**
-     * Caller is responsible for passing valid parameters, they are not checked.
-     * <p>
-     * bucket can be empty or null (using <code>setBucket()</code> later, for example)
-     * 
-     * @param accessKeyId
-     * @param secretAccessKey
-     * @param bucket
+     * Caller must call {¶{@link initialize} right after creating creating a new instance
      */
-    public S3HandlerImpl(String accessKeyId, String secretAccessKey, String bucket) {
-
-        awsAccessKeyId = accessKeyId;
-        awsSecretAccessKey = secretAccessKey;
-        this.bucket = bucket;
-        
-        setup();
+    public S3HandlerImpl() {
     }
     
     protected void setup() {

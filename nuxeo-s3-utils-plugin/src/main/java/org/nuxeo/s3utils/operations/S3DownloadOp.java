@@ -22,12 +22,14 @@ import java.io.IOException;
 
 import org.apache.commons.lang.StringUtils;
 import org.nuxeo.ecm.automation.core.Constants;
+import org.nuxeo.ecm.automation.core.annotations.Context;
 import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.s3utils.S3Handler;
+import org.nuxeo.s3utils.S3HandlerServiceImpl;
 
 /**
  * 
@@ -37,6 +39,12 @@ import org.nuxeo.s3utils.S3Handler;
 public class S3DownloadOp {
     
     public static final String ID = "S3Utils.Download";
+
+    @Context
+    protected S3HandlerServiceImpl s3HandlerService;
+    
+    @Param(name = "s3handler", required = false, values = { org.nuxeo.s3utils.Constants.DEFAULT_HANDLER_NAME })
+    protected String s3handler;
     
     @Param(name = "bucket", required = false)
     protected String bucket;
@@ -49,8 +57,7 @@ public class S3DownloadOp {
         
         Blob result = null;
         
-        GET THE S23HANDLER FROM THE SERVICE
-        S3Handler s3Handler = new S3Handler();
+        S3Handler s3Handler = s3HandlerService.getS3Handler(s3handler);
         if(StringUtils.isNotBlank(bucket)) {
             s3Handler.setBucket(bucket);
         }
