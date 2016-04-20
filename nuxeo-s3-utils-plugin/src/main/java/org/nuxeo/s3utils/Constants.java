@@ -33,6 +33,8 @@ public class Constants {
     public static final String CONF_KEY_NAME_BUCKET = "nuxeo.aws.s3utils.bucket";
 
     public static final String CONF_KEY_NAME_DURATION = "nuxeo.aws.s3utils.duration";
+
+    public static final String CONF_KEY_NAME_USECACHEFOREXISTSKEY = "nuxeo.aws.s3utils.use_cache_for_exists_key";
     
     public static final int DEFAULT_SIGNED_URL_DURATION = 1200;// 20 minutes
 

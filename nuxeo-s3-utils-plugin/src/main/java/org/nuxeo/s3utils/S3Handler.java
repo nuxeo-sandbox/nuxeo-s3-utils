@@ -55,12 +55,17 @@ public interface S3Handler {
             String contentDisposition) throws NuxeoException;
 
     // This method should always check the key on S3, never looking in the cache (if any)
+    public boolean existsKeyInS3(String inBucket, String inKey);
+
+    // This method should always check the key on S3, never looking in the cache (if any)
     public boolean existsKeyInS3(String inKey);
 
     // This method should first check in the cache (CacheForKeyExists) if the key exists
+    // If a cache is not used, it then just check in S3
     public boolean existsKey(String inKey);
 
     // This method should first check in the cache (CacheForKeyExists) if the key exists
+    // If a cache is not used, it then just check in S3
     public boolean existsKey(String bucket, String inKey);
 
     public String getBucket();

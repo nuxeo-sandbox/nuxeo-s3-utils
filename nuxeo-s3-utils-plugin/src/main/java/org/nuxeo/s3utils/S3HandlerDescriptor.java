@@ -18,6 +18,7 @@
  */
 package org.nuxeo.s3utils;
 
+import org.apache.commons.lang.StringUtils;
 import org.nuxeo.common.xmap.annotation.XNode;
 //import org.nuxeo.common.xmap.annotation.XNodeMap;
 import org.nuxeo.common.xmap.annotation.XObject;
@@ -45,8 +46,13 @@ public class S3HandlerDescriptor {
 
     @XNode("tempSignedUrlDuration")
     protected String tempSignedUrlDuration = "";
-    
+
+    @XNode("useCacheForExistsKey")
+    protected String useCacheForExistsKey = "false";
+
     protected int signedUrlDuration = -1;
+
+    protected int useExistsKeyCache = -1;
 
     public String getName() {
         return name;
@@ -68,22 +74,32 @@ public class S3HandlerDescriptor {
         return bucket;
     }
 
+    public boolean useCacheForExistsKey() {
+
+        if (useExistsKeyCache < 0) {
+            if (StringUtils.isNotBlank(useCacheForExistsKey) && "true".equals(useCacheForExistsKey.toLowerCase())) {
+                useExistsKeyCache = 1;
+            } else {
+                useExistsKeyCache = 0;
+            }
+        }
+        return useExistsKeyCache == 1;
+    }
+
     public int getTempSignedUrlDuration() {
-        if(signedUrlDuration < 0) {
-            if(!tempSignedUrlDuration.isEmpty()) {
+        if (signedUrlDuration < 0) {
+            if (!tempSignedUrlDuration.isEmpty()) {
                 try {
                     signedUrlDuration = (int) Long.parseLong(tempSignedUrlDuration);
                 } catch (NumberFormatException e) {
                     signedUrlDuration = -1;
                 }
             }
-            if(signedUrlDuration < 0) {
+            if (signedUrlDuration < 0) {
                 signedUrlDuration = Constants.DEFAULT_SIGNED_URL_DURATION;
             }
         }
         return signedUrlDuration;
     }
-    
-    
 
 }

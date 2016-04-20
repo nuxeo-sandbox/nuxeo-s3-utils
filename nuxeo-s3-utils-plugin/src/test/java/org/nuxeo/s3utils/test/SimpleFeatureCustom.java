@@ -67,6 +67,8 @@ public class SimpleFeatureCustom extends SimpleFeature {
 
     public static final String TEST_CONF_KEY_NAME_AWS_S3_BUCKET = "test.aws.s3.bucket";
 
+    public static final String TEST_CONF_KEY_NAME_USE_CACHE = "test.use.cache";
+
     public static final String TEST_CONF_KEY_NAME_OBJECT_KEY = "test.object.key";
 
     public static final String TEST_CONF_KEY_NAME_OBJECT_SIZE = "test.object.size";
@@ -120,6 +122,7 @@ public class SimpleFeatureCustom extends SimpleFeature {
             systemProps.setProperty(Constants.CONF_KEY_NAME_SECRET_KEY,
                     props.getProperty(TEST_CONF_KEY_NAME_AWS_SECRET));
             systemProps.setProperty(Constants.CONF_KEY_NAME_BUCKET, props.getProperty(TEST_CONF_KEY_NAME_AWS_S3_BUCKET));
+            systemProps.setProperty(Constants.CONF_KEY_NAME_USECACHEFOREXISTSKEY, props.getProperty(TEST_CONF_KEY_NAME_USE_CACHE));
 
         }
     }
@@ -131,6 +134,7 @@ public class SimpleFeatureCustom extends SimpleFeature {
         p.remove(Constants.CONF_KEY_NAME_ACCESS_KEY);
         p.remove(Constants.CONF_KEY_NAME_SECRET_KEY);
         p.remove(Constants.CONF_KEY_NAME_BUCKET);
+        p.remove(Constants.CONF_KEY_NAME_USECACHEFOREXISTSKEY);
     }
 
 }

@@ -166,6 +166,16 @@ public class TestS3Handler {
         isInCache = cache.isInCache(UUID.randomUUID().toString());
         assertFalse(isInCache);
         
+        // Add a non existing file
+        String other = UUID.randomUUID().toString();
+        exists = cache.existsKey(other);
+        assertFalse(exists);
+        isInCache = cache.isInCache(other);
+        assertTrue(isInCache);
+        
+        // Now, test the count. We should have 2, TEST_FILE_KEY and other
+        assertEquals(2, cache.getCacheCount());
+        
         cache.cleanup();
         
         // Now, test duration

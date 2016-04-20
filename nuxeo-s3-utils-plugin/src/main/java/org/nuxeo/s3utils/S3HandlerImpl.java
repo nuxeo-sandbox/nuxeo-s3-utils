@@ -58,9 +58,11 @@ public class S3HandlerImpl implements S3Handler {
 
     protected int signedUrlDuration;
 
+    protected boolean useCacheForExistsKey;
+
     protected AmazonS3 s3;
 
-    protected CacheForKeyExists signedUrlCache;
+    protected CacheForKeyExists signedUrlCache = null;
 
     /**
      * Caller must call {¶{@link initialize} right after creating creating a new instance
@@ -76,6 +78,7 @@ public class S3HandlerImpl implements S3Handler {
         awsSecretAccessKey = desc.getAwsSecret();
         currentBucket = desc.getBucket();
         signedUrlDuration = desc.getTempSignedUrlDuration();
+        useCacheForExistsKey = desc.useCacheForExistsKey();
 
         setup();
     }
@@ -84,7 +87,9 @@ public class S3HandlerImpl implements S3Handler {
         BasicAWSCredentials awsCredentialsProvider = new BasicAWSCredentials(awsAccessKeyId, awsSecretAccessKey);
         s3 = new AmazonS3Client(awsCredentialsProvider);
 
-        signedUrlCache = new CacheForKeyExists(this);
+        if (useCacheForExistsKey) {
+            signedUrlCache = new CacheForKeyExists(this);
+        }
     }
 
     @Override
@@ -94,29 +99,6 @@ public class S3HandlerImpl implements S3Handler {
             signedUrlCache.cleanup();
             signedUrlCache = null;
         }
-    }
-
-    /**
-     * Allows to change the bucket (for the same account)
-     * 
-     * @param inBucket
-     * @since 8.1
-     */
-    @Override
-    public void setBucket(String inBucket) {
-        currentBucket = inBucket;
-        signedUrlCache.setBucket(inBucket);
-    }
-
-    /**
-     * Return the {@link AmazonS3} object
-     * 
-     * @return the AmazonS3 object
-     * @since 8.1
-     */
-    @Override
-    public AmazonS3 getS3() {
-        return s3;
     }
 
     /**
@@ -308,16 +290,20 @@ public class S3HandlerImpl implements S3Handler {
     /**
      * Returns true if the key exists in the current bucket and never uses the CacheForKeyExists
      * <p>
-     * Use the current bucket (default from the configuration, or the last one after calling setBucket()
+     * If inBucket is empty, use the current bucket (default from the configuration, or the last one after calling setBucket()
      */
     @Override
-    public boolean existsKeyInS3(String inKey) {
+    public boolean existsKeyInS3(String inBucket, String inKey) {
 
         boolean exists = false;
+        
+        if(StringUtils.isBlank(inBucket)) {
+            inBucket = currentBucket;
+        }
 
         try {
             @SuppressWarnings("unused")
-            ObjectMetadata metadata = s3.getObjectMetadata(currentBucket, inKey);
+            ObjectMetadata metadata = s3.getObjectMetadata(inBucket, inKey);
             exists = true;
         } catch (AmazonClientException e) {
             if (!S3Handler.errorIsMissingKey(e)) {
@@ -327,6 +313,17 @@ public class S3HandlerImpl implements S3Handler {
         }
 
         return exists;
+    }
+
+    /**
+     * Returns true if the key exists in the current bucket and never uses the CacheForKeyExists
+     * <p>
+     * Use the current bucket (default from the configuration, or the last one after calling setBucket()
+     */
+    @Override
+    public boolean existsKeyInS3(String inKey) {
+        
+        return existsKeyInS3(null, inKey);
     }
 
     /**
@@ -355,7 +352,36 @@ public class S3HandlerImpl implements S3Handler {
             inBucket = currentBucket;
         }
 
-        return signedUrlCache.existsKey(inBucket, inKey);
+        if (signedUrlCache != null) {
+            return signedUrlCache.existsKey(inBucket, inKey);
+        } else {
+            return existsKeyInS3(inBucket, inKey);
+        }
+    }
+
+    /**
+     * Allows to change the bucket (for the same account)
+     * 
+     * @param inBucket
+     * @since 8.1
+     */
+    @Override
+    public void setBucket(String inBucket) {
+        currentBucket = inBucket;
+        if (signedUrlCache != null) {
+            signedUrlCache.setBucket(inBucket);
+        }
+    }
+
+    /**
+     * Return the {@link AmazonS3} object
+     * 
+     * @return the AmazonS3 object
+     * @since 8.1
+     */
+    @Override
+    public AmazonS3 getS3() {
+        return s3;
     }
 
     public String getBucket() {

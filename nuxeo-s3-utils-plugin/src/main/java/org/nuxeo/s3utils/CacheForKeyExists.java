@@ -27,7 +27,7 @@ import java.util.Set;
 import org.apache.commons.lang.StringUtils;
 
 /**
- * This class caches S3 keys for a given S3Handler. This is to avoid checking a key "every second"
+ * This class caches S3 keys and their existence on S3 for a given S3Handler. This is to avoid checking a key too often
  * 
  * @since 7.10
  */
@@ -195,6 +195,16 @@ public class CacheForKeyExists {
         }
 
         return exists;
+    }
+    
+    /**
+     * Returns the number of elements in the cache.
+     * 
+     * @return
+     * @since 8.2
+     */
+    public int getCacheCount() {
+        return cachedKeysAndExist.size();
     }
 
     /**

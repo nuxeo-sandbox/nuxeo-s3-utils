@@ -20,7 +20,7 @@
 
 	<!-- Default handler -->
 	<extension target="org.nuxeo.s3utils.service" point="configuration">
-		<s3Handler name="default">
+		<s3Handler>
 			<name>default</name>
 			<class>org.nuxeo.s3utils.S3HandlerImpl</class>
 			<awsKey>${nuxeo.aws.s3utils.keyid:=}</awsKey>
@@ -28,6 +28,7 @@
 			<bucket>${nuxeo.aws.s3utils.bucket:=}</bucket>
 			<tempSignedUrlDuration>${nuxeo.aws.s3utils.duration:=}
 			</tempSignedUrlDuration>
+			<useCacheForExistsKey>${nuxeo.aws.s3utils.use_cache_for_exists_key:=}</useCacheForExistsKey>
 		</s3Handler>
 	</extension>
 
