@@ -1,21 +1,34 @@
 <?xml version="1.0"?>
 <component name="org.nuxeo.s3utils.service">
 
-  <documentation>
-    Dispatch the handling to the appropriate S3Handler.
-  </documentation>
+	<documentation>
+		Dispatch the handling to the appropriate S3Handler.
+	</documentation>
 
-  <implementation class="org.nuxeo.s3utils.S3HandlerServiceImpl" />
+	<implementation class="org.nuxeo.s3utils.S3HandlerServiceImpl" />
 
-  <service>
-    <provide interface="org.nuxeo.s3utils.S3HandlerService" />
-  </service>
+	<service>
+		<provide interface="org.nuxeo.s3utils.S3HandlerService" />
+	</service>
 
-  <extension-point name="configuration">
-    <documentation>
-      Extension points to register S3Handlers.
-    </documentation>
-    <object class="org.nuxeo.s3utils.S3HandlerDescriptor" />
-  </extension-point>
+	<extension-point name="configuration">
+		<documentation>
+			Extension points to register S3Handlers.
+		</documentation>
+		<object class="org.nuxeo.s3utils.S3HandlerDescriptor" />
+	</extension-point>
+
+	<!-- Default handler -->
+	<extension target="org.nuxeo.s3utils.service" point="configuration">
+		<s3Handler name="default">
+			<name>default</name>
+			<class>org.nuxeo.s3utils.S3HandlerImpl</class>
+			<awsKey>${nuxeo.aws.s3utils.keyid:=}</awsKey>
+			<awsSecret>${nuxeo.aws.s3utils.secret:=}</awsSecret>
+			<bucket>${nuxeo.aws.s3utils.bucket:=}</bucket>
+			<tempSignedUrlDuration>${nuxeo.aws.s3utils.duration:=}
+			</tempSignedUrlDuration>
+		</s3Handler>
+	</extension>
 
 </component>

@@ -34,6 +34,6 @@ public class Constants {
 
     public static final String CONF_KEY_NAME_DURATION = "nuxeo.aws.s3utils.duration";
     
-    public static final int DEFAULT_SIGNED_URL_DIRATION = 3600;
+    public static final int DEFAULT_SIGNED_URL_DURATION = 1200;// 20 minutes
 
 }

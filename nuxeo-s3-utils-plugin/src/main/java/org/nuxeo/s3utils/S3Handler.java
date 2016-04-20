@@ -19,22 +19,24 @@
 package org.nuxeo.s3utils;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.Map;
 
+import org.apache.commons.lang.StringUtils;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.NuxeoException;
+import org.nuxeo.runtime.api.Framework;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
 
 /**
- * @since TODO
+ * @since 8.2
  */
 public interface S3Handler {
-    
+
     public void initialize(S3HandlerDescriptor desc) throws NuxeoException;
+
+    public void cleanup();
 
     public void setBucket(String inBucket);
 
@@ -49,7 +51,33 @@ public interface S3Handler {
     public String buildPresignedUrl(String inKey, int durationInSeconds, String contentType, String contentDisposition)
             throws NuxeoException;
 
+    public String buildPresignedUrl(String inBucket, String inKey, int durationInSeconds, String contentType,
+            String contentDisposition) throws NuxeoException;
+
+    // This method should always check the key on S3, never looking in the cache (if any)
+    public boolean existsKeyInS3(String inKey);
+
+    // This method should first check in the cache (CacheForKeyExists) if the key exists
     public boolean existsKey(String inKey);
+
+    // This method should first check in the cache (CacheForKeyExists) if the key exists
+    public boolean existsKey(String bucket, String inKey);
+
+    public String getBucket();
+
+    public int getSignedUrlDuration();
+
+    public static S3Handler getS3Handler(String name) {
+
+        S3HandlerService s3HandlerService = (S3HandlerService) Framework.getService(S3HandlerService.class);
+
+        if (StringUtils.isBlank(name)) {
+            name = Constants.DEFAULT_HANDLER_NAME;
+        }
+
+        return s3HandlerService.getS3Handler(name);
+
+    }
 
     public static String buildDetailedMessageFromAWSException(Exception e) {
 

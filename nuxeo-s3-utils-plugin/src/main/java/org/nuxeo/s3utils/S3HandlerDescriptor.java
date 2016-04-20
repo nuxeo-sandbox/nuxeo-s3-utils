@@ -69,16 +69,16 @@ public class S3HandlerDescriptor {
     }
 
     public int getTempSignedUrlDuration() {
-        if(signedUrlDuration == -1) {
+        if(signedUrlDuration < 0) {
             if(!tempSignedUrlDuration.isEmpty()) {
                 try {
                     signedUrlDuration = (int) Long.parseLong(tempSignedUrlDuration);
                 } catch (NumberFormatException e) {
                     signedUrlDuration = -1;
                 }
-                if(signedUrlDuration < 0) {
-                    signedUrlDuration = Constants.DEFAULT_SIGNED_URL_DIRATION;
-                }
+            }
+            if(signedUrlDuration < 0) {
+                signedUrlDuration = Constants.DEFAULT_SIGNED_URL_DURATION;
             }
         }
         return signedUrlDuration;

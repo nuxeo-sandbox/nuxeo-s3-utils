@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Properties;
 
 import org.apache.commons.lang.StringUtils;
 import org.junit.Assume;
@@ -34,93 +33,46 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.ecm.platform.test.PlatformFeature;
+import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.s3utils.Constants;
-import org.nuxeo.s3utils.S3TempSignedURLBuilder;
+import org.nuxeo.s3utils.S3Handler;
+import org.nuxeo.s3utils.S3HandlerService;
 
 /**
- * Important: To test the feature, we don't want to hard code the AWS keys (since this code could be published on GitHub
- * for example) and we don't want to hard code he bucket name or the distant object key, since everyone will have a
- * different one. So, the principles used are the following:
- * <ul>
- * <li>We have a file named aws-test.conf at nuxeo-s3utils-plugin/src/test/resources/</li>
- * <li>The file contains the keys</li>
- * <li>The .gitignore config file ignores this file, so it is not sent on GitHub</li>
- * </ul>
- * This configuration file also stores the key of the file to test, and it's info. So, basically to run the test, create
- * this file at nuxeo-s3utils-plugin/src/test/resources/ and set the following properties:
- * 
- * <pre>
- * {@code
- * test.aws.key=HERE_THE_KEY_ID
- * test.aws.secret=HERE_THE_SECRET_KEY
- * test.aws..s3.bucket=HERE_THE_NAME_OF_THE_BUCKET_TO_TEST
- * test.object=Creative-Brief-Lorem-ipsum.pdf
- * test.object.size = 39119
- * }
- * </pre>
+ * See {@link SimpleFeatureCustom} for explanation about the local configuration file used for testing.
  * 
  * @since 7.10
  */
 @RunWith(FeaturesRunner.class)
-@Features({ PlatformFeature.class })
+@Features({ PlatformFeature.class, SimpleFeatureCustom.class })
 @Deploy({ "nuxeo-s3-utils" })
 public class TestS3TempSignedUrl {
-
-    protected static String awsKeyId;
-
-    protected static String awsSecret;
-
-    protected static String awsBucket;
 
     protected static String TEST_FILE_KEY;
 
     protected static long TEST_FILE_SIZE = -1;
 
+    protected static S3Handler s3Handler;
+
     @Before
     public void setup() throws Exception {
 
-        Properties props = ConfigParametersForTest.loadProperties();
-        if (props != null) {
-            // Check we do have the keys
-            if (StringUtils.isBlank(awsKeyId)) {
-                awsKeyId = props.getProperty(ConfigParametersForTest.TEST_CONF_KEY_NAME_AWS_KEY_ID);
-                assertTrue("Missing " + ConfigParametersForTest.TEST_CONF_KEY_NAME_AWS_KEY_ID,
-                        StringUtils.isNotBlank(awsKeyId));
-            }
-
-            if (StringUtils.isBlank(awsSecret)) {
-                awsSecret = props.getProperty(ConfigParametersForTest.TEST_CONF_KEY_NAME_AWS_SECRET);
-                assertTrue("Missing " + ConfigParametersForTest.TEST_CONF_KEY_NAME_AWS_SECRET,
-                        StringUtils.isNotBlank(awsSecret));
-            }
-
-            if (StringUtils.isBlank(awsBucket)) {
-                awsBucket = props.getProperty(ConfigParametersForTest.TEST_CONF_KEY_NAME_AWS_S3_BUCKET);
-                assertTrue("Missing " + ConfigParametersForTest.TEST_CONF_KEY_NAME_AWS_S3_BUCKET,
-                        StringUtils.isNotBlank(awsBucket));
-            }
-
-            Properties systemProps = System.getProperties();
-            systemProps.setProperty(Constants.CONF_KEY_NAME_ACCESS_KEY, awsKeyId);
-            systemProps.setProperty(Constants.CONF_KEY_NAME_SECRET_KEY, awsSecret);
-            systemProps.setProperty(Constants.CONF_KEY_NAME_BUCKET, awsBucket);
-
-            // Now the file to test
-            if (StringUtils.isBlank(TEST_FILE_KEY)) {
-                TEST_FILE_KEY = props.getProperty(ConfigParametersForTest.TEST_CONF_KEY_NAME_OBJECT_KEY);
-                assertTrue("Missing " + ConfigParametersForTest.TEST_CONF_KEY_NAME_OBJECT_KEY,
-                        StringUtils.isNotBlank(TEST_FILE_KEY));
-            }
-
-            if (TEST_FILE_SIZE == -1) {
-                String sizeStr = props.getProperty(ConfigParametersForTest.TEST_CONF_KEY_NAME_OBJECT_SIZE);
-                assertTrue("Missing " + ConfigParametersForTest.TEST_CONF_KEY_NAME_OBJECT_SIZE,
-                        StringUtils.isNotBlank(sizeStr));
-                TEST_FILE_SIZE = Long.parseLong(sizeStr);
-            }
+        if(SimpleFeatureCustom.hasLocalTestConfiguration()) {
+            // Sanity check
+            TEST_FILE_KEY = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY);
+            assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY,
+                    StringUtils.isNotBlank(TEST_FILE_KEY));
+            
+            String sizeStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE);
+            assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE,
+                    StringUtils.isNotBlank(sizeStr));
+            TEST_FILE_SIZE = Long.parseLong(sizeStr);
+            
+            S3HandlerService shs = (S3HandlerService) Framework.getService(S3HandlerService.class);
+            s3Handler = shs.getS3Handler(Constants.DEFAULT_HANDLER_NAME);
         }
 
     }
@@ -128,10 +80,9 @@ public class TestS3TempSignedUrl {
     @Test
     public void testGetTempSignedUrl() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", ConfigParametersForTest.hasLocalConfFile());
+        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
 
-        S3TempSignedURLBuilder builder = new S3TempSignedURLBuilder();
-        String urlStr = builder.build(TEST_FILE_KEY, 0, null, "filename=" + TEST_FILE_KEY);
+        String urlStr = s3Handler.buildPresignedUrl(TEST_FILE_KEY, 0, null, "filename=" + TEST_FILE_KEY);
         assertTrue(StringUtils.isNotBlank(urlStr));
 
         // We must be able to download the file without authentication
@@ -150,12 +101,11 @@ public class TestS3TempSignedUrl {
     @Test
     public void testTempSignedUrlShouldFail() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", ConfigParametersForTest.hasLocalConfFile());
+        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
 
         int duration = 2; // 2 seconds, not 20 minutes or whatever S3TempSignedURLBuilder.DEFAULT_EXPIRE is
 
-        S3TempSignedURLBuilder builder = new S3TempSignedURLBuilder();
-        String urlStr = builder.build(TEST_FILE_KEY, duration, null, "filename=" + TEST_FILE_KEY);
+        String urlStr = s3Handler.buildPresignedUrl(TEST_FILE_KEY, duration, null, "filename=" + TEST_FILE_KEY);
         assertTrue(StringUtils.isNotBlank(urlStr));
 
         // Wait for at least the duration
@@ -164,19 +114,6 @@ public class TestS3TempSignedUrl {
         // Downloading should fail, so the returned File is null
         File f = downloadFile(urlStr);
         assertNull(f);
-
-    }
-
-    @Test
-    public void testExistsKey() throws Exception {
-
-        Assume.assumeTrue("No custom configuration file => no test", ConfigParametersForTest.hasLocalConfFile());
-
-        boolean exists = S3TempSignedURLBuilder.existsKey(TEST_FILE_KEY);
-        assertTrue(exists);
-
-        exists = S3TempSignedURLBuilder.existsKey("INVALID-KEY");
-        assertFalse(exists);
 
     }
 

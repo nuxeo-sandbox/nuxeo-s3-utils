@@ -37,6 +37,9 @@ public class S3HandlerServiceImpl extends DefaultComponent implements S3HandlerS
     protected HashMap<String, S3HandlerDescriptor> contributions = new HashMap<String, S3HandlerDescriptor>();
     protected HashMap<String, S3Handler> s3Handlers = new HashMap<String, S3Handler>();
     
+    // ==========================================================
+    // ==================== DefaultComponent ====================
+    // ==========================================================
     /**
      * Component activated notification.
      * Called when the component is activated. All component dependencies are resolved at that moment.
@@ -85,15 +88,23 @@ public class S3HandlerServiceImpl extends DefaultComponent implements S3HandlerS
     }
     
     protected void registerS3Handler(S3HandlerDescriptor desc) {
-        contributions.put(desc.name, desc);
+        contributions.put(desc.getName(), desc);
         // lookup now to have immediate feedback on error
-        getS3Handler(desc.name);
+        getS3Handler(desc.getName());
     }
     
     protected void unregisterS3Handler(S3HandlerDescriptor desc) {
-        contributions.remove(desc.name);
+        contributions.remove(desc.getName());
+        S3Handler handler = s3Handlers.get(desc.getName());
+        if(handler != null) {
+            handler.cleanup();
+            s3Handlers.remove(desc.getName());
+        }
     }
     
+    // ==========================================================
+    // ==================== S3HandlerService ====================
+    // ==========================================================
     /**
      * Returns the S3Handler given it's name. Returns <code>null</code> if not found.
      * 
@@ -128,6 +139,8 @@ public class S3HandlerServiceImpl extends DefaultComponent implements S3HandlerS
             } catch(NuxeoException e) {
                 throw new RuntimeException(e);
             }
+            
+            s3Handlers.put(name, handler);
         }
         
         

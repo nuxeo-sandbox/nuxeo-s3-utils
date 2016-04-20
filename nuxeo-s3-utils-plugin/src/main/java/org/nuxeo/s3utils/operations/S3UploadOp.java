@@ -47,8 +47,8 @@ public class S3UploadOp {
     @Context
     protected S3HandlerServiceImpl s3HandlerService;
     
-    @Param(name = "s3handler", required = false, values = { org.nuxeo.s3utils.Constants.DEFAULT_HANDLER_NAME })
-    protected String s3handler;
+    @Param(name = "handlerName", required = false, values = { org.nuxeo.s3utils.Constants.DEFAULT_HANDLER_NAME })
+    protected String handlerName;
 
     @Param(name = "bucket", required = false)
     protected String bucket;
@@ -63,7 +63,10 @@ public class S3UploadOp {
     public Blob run(Blob input) throws NuxeoException, IOException {
 
         if (input != null) {
-            S3Handler s3Handler = s3HandlerService.getS3Handler(s3handler);
+            if(StringUtils.isBlank(handlerName)) {
+                handlerName = org.nuxeo.s3utils.Constants.DEFAULT_HANDLER_NAME;
+            }
+            S3Handler s3Handler = s3HandlerService.getS3Handler(handlerName);
             if (StringUtils.isNotBlank(bucket)) {
                 s3Handler.setBucket(bucket);
             }
