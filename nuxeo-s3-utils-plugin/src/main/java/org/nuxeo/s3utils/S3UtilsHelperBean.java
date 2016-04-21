@@ -27,7 +27,7 @@ import org.jboss.seam.annotations.Name;
 import org.jboss.seam.annotations.Scope;
 
 /**
- * Bean helper containing misc. functions to be called from an .xml file, typically a widget template.
+ * Bean helper containing misc. functions to be called from an .xhtml file, typically a widget template.
  * <p>
  * Here is an example, where the objectKey is stored in a document, in the "myschema:S3key" field:
  * <p>
@@ -69,7 +69,7 @@ public class S3UtilsHelperBean implements Serializable {
     }
 
     /**
-     * The full call. Return an S3 Temp Signed Url for this S3Handler, this key, in this bucket, expiring in he given
+     * The full call. Return an S3 Temp Signed Url for this S3Handler, this key, in this bucket, expiring in the given
      * time, and setting content-type and content-disposition (using the key id, secret key and bucket set in the
      * configuration.)
      * <p>
@@ -93,6 +93,9 @@ public class S3UtilsHelperBean implements Serializable {
         String url = "";
 
         if (StringUtils.isNotBlank(objectKey)) {
+            if (StringUtils.isBlank(handlerName)) {
+                handlerName = Constants.DEFAULT_HANDLER_NAME;
+            }
             S3Handler s3Handler = S3Handler.getS3Handler(handlerName);
             url = s3Handler.buildPresignedUrl(bucket, objectKey, durationInSeconds, contentDisposition, null);
         }

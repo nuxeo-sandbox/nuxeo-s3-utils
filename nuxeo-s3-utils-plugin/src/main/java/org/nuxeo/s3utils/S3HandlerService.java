@@ -24,5 +24,12 @@ package org.nuxeo.s3utils;
  */
 public interface S3HandlerService {
 
+    /**
+     * Return the S3Handler given its name. If not found in the XML contributions, returns null
+     * 
+     * @param name
+     * @return the <S3Handler contributed, or null if not found
+     * @since 8.2
+     */
     public S3Handler getS3Handler(String name);
 }

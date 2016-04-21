@@ -22,7 +22,6 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 
@@ -70,7 +69,7 @@ public class CacheForKeyExists {
     }
 
     protected String buildCachekey(String bucket, String objectKey) {
-        if(StringUtils.isBlank(bucket)) {
+        if (StringUtils.isBlank(bucket)) {
             bucket = defaultBucket;
         }
         return bucket + objectKey;
@@ -142,22 +141,38 @@ public class CacheForKeyExists {
         }
     }
 
+    /**
+     * Returns true is the key in the bucket is in the cache. If the bucket is empty, uses the "current bucket"
+     * 
+     * @param bucket
+     * @param objectKey
+     * @return true if (bucket + key) are in the cache
+     * @since 8.2
+     */
     public boolean isInCache(String bucket, String objectKey) {
 
         String cacheKey = buildCachekey(bucket, objectKey);
         return existsKeyCheckInCache(cacheKey) > -1;
     }
 
+    /**
+     * Returns true is the key in the bucket is in the cache. Uses the "current bucket"
+     * 
+     * @param objectKey
+     * @return true if (bucket + key) are in the cache
+     * @since 8.2
+     */
     public boolean isInCache(String objectKey) {
         return isInCache(null, objectKey);
     }
 
     /**
-     * Checks if the key is in the cache. If yes, returns the stored true/false value. If not, adds it after checking on
-     * S3
+     * Checks if the key exists on S3, after first checking if it is in the cache
+     * <p>
+     * See {@link existsKey(String bucket, String objectKey)}
      * 
      * @param objectKey
-     * @return
+     * @return true is the key exists on S3
      * @since 8.1
      */
     public boolean existsKey(String objectKey) {
@@ -166,11 +181,14 @@ public class CacheForKeyExists {
     }
 
     /**
-     * Checks if the key is in the cache. If yes, returns the stored true/false value. If not, adds it after checking on
-     * S3
+     * Checks if the key exists on S3:
+     * <ul>
+     * <li>First, checks the key in the cache</li>
+     * <li>If not found, checks on S3 and adds the info to the cache</li>
+     * </ul>
      * 
      * @param objectKey
-     * @return
+     * @return true is the key exists on S3
      * @since 8.1
      */
     public boolean existsKey(String bucket, String objectKey) {
@@ -196,11 +214,11 @@ public class CacheForKeyExists {
 
         return exists;
     }
-    
+
     /**
      * Returns the number of elements in the cache.
      * 
-     * @return
+     * @return the number of elements in the cache
      * @since 8.2
      */
     public int getCacheCount() {
@@ -217,6 +235,12 @@ public class CacheForKeyExists {
         defaultBucket = StringUtils.isBlank(inBucket) ? s3Handler.getBucket() : inBucket;
     }
 
+    /**
+     * Returns the maximum objects stored in the cache. Default is {@link MAX_KEYS}
+     * 
+     * @return the maximum objects stored in the cache
+     * @since 8.2
+     */
     public int getMaxInCache() {
         return maxInCache;
     }
@@ -224,19 +248,25 @@ public class CacheForKeyExists {
     /**
      * If maxInCache is <= 0, the default value applies
      * 
-     * @param durationInCache
-     * @since 8.1
+     * @param maxInCache
+     * @since 8.2
      */
     public void setMaxInCache(int maxInCache) {
         this.maxInCache = maxInCache <= 0 ? MAX_KEYS : maxInCache;
     }
 
+    /**
+     * Returns the durations of an object in the cache, in milliseconds
+     * 
+     * @return the duration in the cache
+     * @since 8.2
+     */
     public int getDurationInCache() {
         return durationInCache;
     }
 
     /**
-     * If durationInCacheMillisecs is <= 0, the default value applies
+     * If durationInCacheMillisecs is <= 0, the default value applies ({@link DURATION_IN_CACHE_MS})
      * 
      * @param durationInCache
      * @since 8.1

@@ -22,52 +22,49 @@ import java.io.IOException;
 
 import org.apache.commons.lang.StringUtils;
 import org.nuxeo.ecm.automation.core.Constants;
-import org.nuxeo.ecm.automation.core.annotations.Context;
 import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.s3utils.S3Handler;
-import org.nuxeo.s3utils.S3HandlerServiceImpl;
 
 /**
+ * Downloads a file from S3, using S3Handler <code>handlerName</code> (if empty, uses the default handler).
+ * <p>
+ * If <code>bucket</code> is empty, uses the bucket set in the handler configuration
  * 
  * @since 8.1
  */
-@Operation(id = S3DownloadOp.ID, category = Constants.CAT_BLOB, label = "S3 Utils: Download", description = "")
+@Operation(id = S3DownloadOp.ID, category = Constants.CAT_BLOB, label = "S3 Utils: Download", description = "Downloads a file from S3, using S3Handler <code>handlerName</code> (if empty, uses the default handler). If <code>bucket</code> is empty, uses the bucket set in the handler configuration")
 public class S3DownloadOp {
-    
+
     public static final String ID = "S3Utils.Download";
 
-    @Context
-    protected S3HandlerServiceImpl s3HandlerService;
-    
     @Param(name = "handlerName", required = false, values = { org.nuxeo.s3utils.Constants.DEFAULT_HANDLER_NAME })
     protected String handlerName;
-    
+
     @Param(name = "bucket", required = false)
     protected String bucket;
-    
+
     @Param(name = "key", required = true)
     protected String key;
-    
+
     @OperationMethod
     public Blob run() throws NuxeoException, IOException {
-        
+
         Blob result = null;
-        
-        if(StringUtils.isBlank(handlerName)) {
+
+        if (StringUtils.isBlank(handlerName)) {
             handlerName = org.nuxeo.s3utils.Constants.DEFAULT_HANDLER_NAME;
         }
-        S3Handler s3Handler = s3HandlerService.getS3Handler(handlerName);
-        if(StringUtils.isNotBlank(bucket)) {
+        S3Handler s3Handler = S3Handler.getS3Handler(handlerName);
+        if (StringUtils.isNotBlank(bucket)) {
             s3Handler.setBucket(bucket);
         }
         result = s3Handler.downloadFile(key, null);
-        
+
         return result;
     }
-    
 
 }

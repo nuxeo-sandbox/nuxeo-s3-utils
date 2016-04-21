@@ -19,7 +19,6 @@
 package org.nuxeo.s3utils;
 
 import java.util.HashMap;
-import java.util.Map;
 
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.runtime.model.ComponentContext;
@@ -27,6 +26,7 @@ import org.nuxeo.runtime.model.ComponentInstance;
 import org.nuxeo.runtime.model.DefaultComponent;
 
 /**
+ * IMplementaiton of service: Loads contributions, initializes handlers, ...
  * 
  * @since 8.2
  */

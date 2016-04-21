@@ -24,7 +24,25 @@ import org.nuxeo.common.xmap.annotation.XNode;
 import org.nuxeo.common.xmap.annotation.XObject;
 
 /**
- * @since 8.1
+ * Class handling the S3Handler contribution. Here is an example of XML contribution. Notice that we use an expression (
+ * <code>${avalue:=}</code>) that allows to fill the value from the fonciguration (typically, nuxeo.conf) at startup.
+ * Which is a recommended way to configure values.
+ * <p>
+ * <code><pre>
+ * <extension target="org.nuxeo.s3utils.service" point="configuration">
+ *   <s3Handler>
+ *     <name>default</name>
+ *     <class>org.nuxeo.s3utils.S3HandlerImpl</class>
+ *     <awsKey>${nuxeo.aws.s3utils.keyid:=}</awsKey>
+ *     <awsSecret>${nuxeo.aws.s3utils.secret:=}</awsSecret>
+ *     <bucket>${nuxeo.aws.s3utils.bucket:=}</bucket>
+ *     <tempSignedUrlDuration>${nuxeo.aws.s3utils.duration:=}</tempSignedUrlDuration>
+ *     <useCacheForExistsKey>${nuxeo.aws.s3utils.use_cache_for_exists_key:=}</useCacheForExistsKey>
+ *   </s3Handler>
+ *  </extension>
+ * </pre></code>
+ * 
+ * @since 8.2
  */
 @XObject("s3Handler")
 public class S3HandlerDescriptor {

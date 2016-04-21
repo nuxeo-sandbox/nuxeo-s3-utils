@@ -33,13 +33,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.ecm.platform.test.PlatformFeature;
-import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.s3utils.Constants;
 import org.nuxeo.s3utils.S3Handler;
-import org.nuxeo.s3utils.S3HandlerService;
 
 /**
  * See {@link SimpleFeatureCustom} for explanation about the local configuration file used for testing.
@@ -71,8 +69,7 @@ public class TestS3TempSignedUrl {
                     StringUtils.isNotBlank(sizeStr));
             TEST_FILE_SIZE = Long.parseLong(sizeStr);
             
-            S3HandlerService shs = (S3HandlerService) Framework.getService(S3HandlerService.class);
-            s3Handler = shs.getS3Handler(Constants.DEFAULT_HANDLER_NAME);
+            s3Handler = S3Handler.getS3Handler(Constants.DEFAULT_HANDLER_NAME);
         }
 
     }

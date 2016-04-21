@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * Contributors:
- *     thibaud
+ *     Thibaud Arguillere
  */
 package org.nuxeo.s3utils;
 
@@ -30,46 +30,193 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
 
 /**
+ * Interface to be used by any S3Handler.
+ * <p>
+ * Some comments talk about the "current bucket". it is the bucket set in the XML contribution (S3HandlerDescriptor), or
+ * the bucket explicitly set via <code>setBucket()</code>
+ * 
  * @since 8.2
  */
 public interface S3Handler {
 
+    /**
+     * Called after a new instance has been created.
+     * <p>
+     * <i>IMPORTANT</i>: Your S3Handler _must_ use this class, the S3HandlerService will call it.
+     * 
+     * @param desc
+     * @throws NuxeoException
+     * @since 8.2
+     */
     public void initialize(S3HandlerDescriptor desc) throws NuxeoException;
 
+    /**
+     * Called when the S3Handler is removed. Notice that this should not happen very often. Most of the time, if not
+     * every time, S3HandlerService creates and initializes the contributed handles at startup and releases them when
+     * the server is shut down.
+     * 
+     * @since 8.2
+     */
     public void cleanup();
 
+    /**
+     * The handler uses the bucket as set in the S3HandlerDescriptor at initialization time. BUt this can be changed
+     * dynamically.
+     * <p>
+     * Notice that an easy way to handle different buckets on the same S3 instance is to contribute different S3Handler
+     * in the XML. Thgis way, there is no need to swithc buckets, just use the correct handler.
+     * 
+     * @param inBucket
+     * @since 8.2
+     */
     public void setBucket(String inBucket);
 
+    /**
+     * @return the AmazonS3 instance created for this handler
+     * @since 8.2
+     */
     public AmazonS3 getS3();
 
+    /**
+     * Uploads inFile to S3, using the "Current bucket"
+     * 
+     * @param inKey
+     * @param inFile
+     * @return true if the file could be uploaded with no error
+     * @throws NuxeoException
+     * @since 8.2
+     */
     public boolean sendFile(String inKey, File inFile) throws NuxeoException;
 
+    /**
+     * Downloads the file from S3 using the "current bucket".
+     * <p>
+     * <code>fileName</code> should be optional (not required by the interface)
+     * 
+     * @param inKey
+     * @param inFileName
+     * @return a Blob of the downloaded file
+     * @throws NuxeoException
+     * @since 8.2
+     */
     public Blob downloadFile(String inKey, String inFileName) throws NuxeoException;
 
+    /**
+     * Deletes the file from S3 using the "current bucket", returns true if succesful
+     * 
+     * @param inKey
+     * @return
+     * @throws NuxeoException
+     * @since 8.2
+     */
     public boolean deleteFile(String inKey) throws NuxeoException;
 
+    /**
+     * Builds a temporary signed URL for the object and returns it.
+     * <p>
+     * Uses the "current bucket"
+     * <p>
+     * If <code>durationInSeconds</code> is <= 0, the duration set in the XML configuration is used (or the default
+     * duration)
+     * <p>
+     * The interface allows <code>contentType</code> and <code>contentDisposition</code> to be empty. But it is
+     * recommended to set them to make sure the is no ambiguity when the URL is used (a key without a file extension for
+     * example)
+     * 
+     * @param objectKey
+     * @param durationInSeconds
+     * @param contentType
+     * @param contentDisposition
+     * @return the URL to the file on S3
+     * @throws NuxeoException
+     * @since 8.2
+     */
     public String buildPresignedUrl(String inKey, int durationInSeconds, String contentType, String contentDisposition)
             throws NuxeoException;
 
+    /**
+     * Builds a temporary signed URL for the object and returns it.
+     * <p>
+     * Uses <code>inBucket</code>. If it is empty, uses the "current bucket"
+     * <p>
+     * If <code>durationInSeconds</code> is <= 0, the duration set in the XML configuration is used (or the default
+     * duration)
+     * <p>
+     * The interface allows <code>contentType</code> and <code>contentDisposition</code> to be empty. But it is
+     * recommended to set them to make sure the is no ambiguity when the URL is used (a key without a file extension for
+     * example)
+     * 
+     * @param inBucket
+     * @param inKey
+     * @param durationInSeconds
+     * @param contentType
+     * @param contentDisposition
+     * @return the URL to the file on S3
+     * @throws NuxeoException
+     * @since 8.2
+     */
     public String buildPresignedUrl(String inBucket, String inKey, int durationInSeconds, String contentType,
             String contentDisposition) throws NuxeoException;
 
+    /**
+     * Returns true if the key exists in the current bucket.
+     * <p>
+     * <b>IMPORTANT</b>: This method should <i>never</i> uses a CacheForKeyExists, and always requests the key on S3
+     * 
+     * @param inBucket
+     * @param inKey
+     * @return true if the key exists in the "current bucket"
+     * @since 8.2
+     */
     // This method should always check the key on S3, never looking in the cache (if any)
     public boolean existsKeyInS3(String inBucket, String inKey);
 
-    // This method should always check the key on S3, never looking in the cache (if any)
+    /**
+     * Returns true if the key exists in the bucket.
+     * <p>
+     * <b>IMPORTANT</b>: This method should <i>never</i> uses a CacheForKeyExists, and always requests the key on S3
+     * 
+     * @param inKey
+     * @return true if the key exists in the bucket
+     * @since 8.2
+     */
     public boolean existsKeyInS3(String inKey);
 
-    // This method should first check in the cache (CacheForKeyExists) if the key exists
-    // If a cache is not used, it then just check in S3
+    /**
+     * Returns true if the key exists on S3 (using the "current bucket"), and should first check in the
+     * CacheForExistsKey (if the configuraiton allows usage of the cache)
+     * 
+     * @param inKey
+     * @return true is the key exists on S3. May use the cache
+     * @since 8.2
+     */
     public boolean existsKey(String inKey);
 
-    // This method should first check in the cache (CacheForKeyExists) if the key exists
-    // If a cache is not used, it then just check in S3
+    /**
+     * Returns true if the key exists on S3, in the bucket, and should first check in the CacheForExistsKey (if the
+     * configuraiton allows usage of the cache)
+     * 
+     * @param bucket
+     * @param inKey
+     * @return
+     * @since 8.2
+     */
     public boolean existsKey(String bucket, String inKey);
 
+    /**
+     * Return the current bucket
+     * 
+     * @return the current bucket
+     * @since 8.2
+     */
     public String getBucket();
 
+    /**
+     * returns the default duration used to build temp. signed URLs
+     * 
+     * @return the default duration used to build temp. signed URLs
+     * @since 8.2
+     */
     public int getSignedUrlDuration();
 
     /**
@@ -91,6 +238,13 @@ public interface S3Handler {
 
     }
 
+    /**
+     * Generic method used to build a message when an error is thrown by AWS
+     * 
+     * @param e
+     * @return a string describing the error
+     * @since 8.2
+     */
     public static String buildDetailedMessageFromAWSException(Exception e) {
 
         String message = "";
@@ -119,6 +273,13 @@ public interface S3Handler {
         return message;
     }
 
+    /**
+     * Generic helper telling the caller if an error catched is a "MIsing Key on S3" error
+     * 
+     * @param e
+     * @return true if the error is "MIssing Key" error
+     * @since 8.2
+     */
     public static boolean errorIsMissingKey(AmazonClientException e) {
         if (e instanceof AmazonServiceException) {
             AmazonServiceException ase = (AmazonServiceException) e;

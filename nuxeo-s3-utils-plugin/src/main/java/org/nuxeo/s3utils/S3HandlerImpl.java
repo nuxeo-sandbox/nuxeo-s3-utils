@@ -50,10 +50,6 @@ public class S3HandlerImpl implements S3Handler {
 
     protected String name;
 
-    protected String awsAccessKeyId;
-
-    protected String awsSecretAccessKey;
-
     protected String currentBucket;
 
     protected int signedUrlDuration;
@@ -65,7 +61,7 @@ public class S3HandlerImpl implements S3Handler {
     protected CacheForKeyExists signedUrlCache = null;
 
     /**
-     * Caller must call {¶{@link initialize} right after creating creating a new instance
+     * Caller must call {@link initialize} right after creating creating a new instance
      */
     public S3HandlerImpl() {
     }
@@ -74,17 +70,15 @@ public class S3HandlerImpl implements S3Handler {
     public void initialize(S3HandlerDescriptor desc) throws NuxeoException {
 
         name = desc.getName();
-        awsAccessKeyId = desc.getAwsKey();
-        awsSecretAccessKey = desc.getAwsSecret();
         currentBucket = desc.getBucket();
         signedUrlDuration = desc.getTempSignedUrlDuration();
         useCacheForExistsKey = desc.useCacheForExistsKey();
 
-        setup();
+        setup(desc);
     }
 
-    protected void setup() {
-        BasicAWSCredentials awsCredentialsProvider = new BasicAWSCredentials(awsAccessKeyId, awsSecretAccessKey);
+    protected void setup(S3HandlerDescriptor desc) {
+        BasicAWSCredentials awsCredentialsProvider = new BasicAWSCredentials(desc.getAwsKey(), desc.getAwsSecret());
         s3 = new AmazonS3Client(awsCredentialsProvider);
 
         if (useCacheForExistsKey) {
@@ -101,15 +95,6 @@ public class S3HandlerImpl implements S3Handler {
         }
     }
 
-    /**
-     * Sends the file to the bucket, returns <code>true</code> if the file was sent with no error.
-     * 
-     * @param inKey
-     * @param inFile
-     * @return true if all went ok
-     * @throws NuxeoException
-     * @since 8.1
-     */
     @Override
     public boolean sendFile(String inKey, File inFile) throws NuxeoException {
 
@@ -128,16 +113,6 @@ public class S3HandlerImpl implements S3Handler {
         return ok;
     }
 
-    /**
-     * Download the file from S3
-     * 
-     * @param inKey
-     * @param inFileName
-     * @return the blob of the distant file
-     * @throws IOException
-     * @throws NuxeoException
-     * @since 8.1
-     */
     @Override
     public Blob downloadFile(String inKey, String inFileName) throws NuxeoException {
 
@@ -178,14 +153,6 @@ public class S3HandlerImpl implements S3Handler {
         return blob;
     }
 
-    /**
-     * Delete the file in S3, returns <code>true</code> if the deletion went ok.
-     * 
-     * @param inKey
-     * @return true if the file was deleted
-     * @throws NuxeoException
-     * @since 8.1
-     */
     @Override
     public boolean deleteFile(String inKey) throws NuxeoException {
 
@@ -204,23 +171,6 @@ public class S3HandlerImpl implements S3Handler {
         return ok;
     }
 
-    /**
-     * Builds a temporary signed URL for the object and returns it. If <code>inBucket</code> is empty, uses the
-     * currentBucket, as set in the S3Handler of after a call to setBucket().
-     * <p>
-     * If <code>durationInSeconds</code> is <= 0, the default duration is used.
-     * <p>
-     * <code>contentType</code> and <code>contentDisposition</code> can be null or "", but it is recommended to set them
-     * to make sure the is no ambiguity when the URL is used (a key without a file extension for example)
-     * 
-     * @param objectKey
-     * @param durationInSeconds
-     * @param contentType
-     * @param contentDisposition
-     * @return the URL to the file on S3
-     * @throws IOException
-     * @since 8.1
-     */
     public String buildPresignedUrl(String inBucket, String inKey, int durationInSeconds, String contentType,
             String contentDisposition) throws NuxeoException {
 
@@ -262,23 +212,6 @@ public class S3HandlerImpl implements S3Handler {
 
     }
 
-    /**
-     * Builds a temporary signed URL for the object and returns it. Uses the currentBucket, as set in the S3Handler of
-     * after a call to setBucket().
-     * <p>
-     * If <code>durationInSeconds</code> is <= 0, the default duration is used.
-     * <p>
-     * <code>contentType</code> and <code>contentDisposition</code> can be null or "", but it is recommended to set them
-     * to make sure the is no ambiguity when the URL is used (a key without a file extension for example)
-     * 
-     * @param objectKey
-     * @param durationInSeconds
-     * @param contentType
-     * @param contentDisposition
-     * @return the URL to the file on S3
-     * @throws IOException
-     * @since 8.1
-     */
     @Override
     public String buildPresignedUrl(String inKey, int durationInSeconds, String contentType, String contentDisposition)
             throws NuxeoException {
@@ -287,11 +220,6 @@ public class S3HandlerImpl implements S3Handler {
 
     }
 
-    /**
-     * Returns true if the key exists in the current bucket and never uses the CacheForKeyExists
-     * <p>
-     * If inBucket is empty, use the current bucket (default from the configuration, or the last one after calling setBucket()
-     */
     @Override
     public boolean existsKeyInS3(String inBucket, String inKey) {
 
@@ -315,23 +243,12 @@ public class S3HandlerImpl implements S3Handler {
         return exists;
     }
 
-    /**
-     * Returns true if the key exists in the current bucket and never uses the CacheForKeyExists
-     * <p>
-     * Use the current bucket (default from the configuration, or the last one after calling setBucket()
-     */
     @Override
     public boolean existsKeyInS3(String inKey) {
         
         return existsKeyInS3(null, inKey);
     }
 
-    /**
-     * Returns true if the key exists. Uses the cache. If the key is in the cache, returns true/false from the cache. If
-     * it is not, the key is checked on S3, and the result is then cached.
-     * <p>
-     * Use the current bucket (default from the configuration, or the last one after calling setBucket()
-     */
     @Override
     public boolean existsKey(String inKey) {
 
@@ -339,12 +256,6 @@ public class S3HandlerImpl implements S3Handler {
 
     }
 
-    /**
-     * Returns true if the key exists. Uses the cache. If the key is in the cache, returns true/false from the cache. If
-     * it is not, the key is checked on S3, and the result is then cached.
-     * <p>
-     * If <code>bucket</code> is empty, uses the current one
-     */
     @Override
     public boolean existsKey(String inBucket, String inKey) {
 
@@ -359,12 +270,6 @@ public class S3HandlerImpl implements S3Handler {
         }
     }
 
-    /**
-     * Allows to change the bucket (for the same account)
-     * 
-     * @param inBucket
-     * @since 8.1
-     */
     @Override
     public void setBucket(String inBucket) {
         currentBucket = inBucket;
@@ -373,12 +278,6 @@ public class S3HandlerImpl implements S3Handler {
         }
     }
 
-    /**
-     * Return the {@link AmazonS3} object
-     * 
-     * @return the AmazonS3 object
-     * @since 8.1
-     */
     @Override
     public AmazonS3 getS3() {
         return s3;
