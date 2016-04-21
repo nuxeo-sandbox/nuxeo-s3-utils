@@ -72,6 +72,13 @@ public interface S3Handler {
 
     public int getSignedUrlDuration();
 
+    /**
+     * Just a convenient method, saving one line of code (getting the service)
+     * 
+     * @param name
+     * @return the S3Handler contributed with this name, null if not found
+     * @since 8.2
+     */
     public static S3Handler getS3Handler(String name) {
 
         S3HandlerService s3HandlerService = (S3HandlerService) Framework.getService(S3HandlerService.class);

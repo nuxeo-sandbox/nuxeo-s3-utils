@@ -30,11 +30,12 @@ import org.nuxeo.s3utils.Constants;
 
 /**
  * Important: To test the feature, we don't want to hard code the AWS keys (since this code could be published on GitHub
- * for example) and we don't want to hard code he bucket name or the distant object key, since everyone will have a
+ * for example) and we don't want to hard code the bucket name or the distant object key, since everyone will have a
  * different one. So, the principles used are the following:
  * <ul>
  * <li>We have a file named aws-test.conf at nuxeo-s3utils-plugin/src/test/resources/</li>
- * <li>The file contains the keys, the bucket, distant object key, ...</li>
+ * <li>The file contains the keys, the bucket, distant object key, ... using the kesy defined below
+ * (TEST_CONF_KEY_NAME_AWS_KEY_ID, etc.)</li>
  * <li>The .gitignore config file ignores this file, so it is not sent on GitHub</li>
  * </ul>
  * So, basically to run the test, create this file at nuxeo-s3utils-plugin/src/test/resources/ and set the following
@@ -92,7 +93,7 @@ public class SimpleFeatureCustom extends SimpleFeature {
 
     @Override
     public void initialize(FeaturesRunner runner) throws Exception {
-        
+
         File file = null;
         FileInputStream fileInput = null;
         try {
@@ -122,7 +123,8 @@ public class SimpleFeatureCustom extends SimpleFeature {
             systemProps.setProperty(Constants.CONF_KEY_NAME_SECRET_KEY,
                     props.getProperty(TEST_CONF_KEY_NAME_AWS_SECRET));
             systemProps.setProperty(Constants.CONF_KEY_NAME_BUCKET, props.getProperty(TEST_CONF_KEY_NAME_AWS_S3_BUCKET));
-            systemProps.setProperty(Constants.CONF_KEY_NAME_USECACHEFOREXISTSKEY, props.getProperty(TEST_CONF_KEY_NAME_USE_CACHE));
+            systemProps.setProperty(Constants.CONF_KEY_NAME_USECACHEFOREXISTSKEY,
+                    props.getProperty(TEST_CONF_KEY_NAME_USE_CACHE));
 
         }
     }
