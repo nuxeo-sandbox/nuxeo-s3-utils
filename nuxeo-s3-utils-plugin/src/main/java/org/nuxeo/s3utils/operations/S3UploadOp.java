@@ -150,10 +150,10 @@ public class S3UploadOp {
 
             Blob b;
             File f;
-            for(DocumentModel doc : docs) {
-                
+            for (DocumentModel doc : docs) {
+
                 b = (Blob) doc.getPropertyValue(xpath);
-                if(b != null) {
+                if (b != null) {
                     f = b.getFile();
                     if (f != null) {
                         @SuppressWarnings("unused")

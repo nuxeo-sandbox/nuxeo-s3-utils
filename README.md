@@ -2,6 +2,13 @@
 
 This add-on for [Nuxeo](http://www.nuxeo.com) contains utilities for AWS S3
 
+2016-04-24: **WARNING** This README is not up-to-date. It is missing the following explanations:
+
+1. It exposes a _servce_ with an _extension point_, alloxing to use several S3 repositories instead of just one. So you can contribute several "S3Handler" via XML contributions
+2. It adds two operaitons, one to upload a file to S3, one to download a file from S3
+
+Until this README is updated, please lok at the JavaDo and the unit-tests. And sorry for the inconvenience :-/
+
 # Setup
 In order to access your AWS S3, the following properties _must_ be set in the configuration file (nuxeo.conf):
 
