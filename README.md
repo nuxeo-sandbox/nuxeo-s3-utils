@@ -1,5 +1,7 @@
 # nuxeo-s3-utils
 
+QA build status: [![Build Status](https://qa.nuxeo.org/jenkins/buildStatus/icon?job=Sandbox/sandbox_nuxeo-s3-utils-master)](https://qa.nuxeo.org/jenkins/buildStatus/icon?job=Sandbox/sandbox_nuxeo-s3-utils-master)
+
 This add-on for [Nuxeo](http://www.nuxeo.com) contains utilities for AWS S3
 
 2016-04-24: **WARNING** This README is not up-to-date. It is missing the following explanations:

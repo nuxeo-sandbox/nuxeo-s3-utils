@@ -5,19 +5,19 @@
   <parent>
     <groupId>org.nuxeo</groupId>
     <artifactId>nuxeo-addons-parent</artifactId>
-    <version>8.2</version>
+    <version>8.3</version>
   </parent>
   <groupId>nuxeo-s3-utils</groupId>
   <artifactId>nuxeo-s3-utils-parent</artifactId>
   <name>Parent Project for Nuxeo S3 Utils</name>
-  <version>1.2-SNAPSHOT</version>
+  <version>8.3-SNAPSHOT</version>
   <packaging>pom</packaging>
   <description />
   <properties>
     <nuxeo.project.version>${project.version}</nuxeo.project.version>
-    <nuxeo.version>8.2</nuxeo.version>
-    <nuxeo.distribution.version>8.2</nuxeo.distribution.version>
-    <nuxeo.s3-utils.version>1.2-SNAPSHOT</nuxeo.s3-utils.version>
+    <nuxeo.version>8.3</nuxeo.version>
+    <nuxeo.distribution.version>8.3</nuxeo.distribution.version>
+    <nuxeo.s3-utils.version>8.3-SNAPSHOT</nuxeo.s3-utils.version>
   </properties>
   <modules>
     <module>nuxeo-s3-utils-plugin</module>
