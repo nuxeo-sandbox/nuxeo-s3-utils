@@ -4,6 +4,7 @@
 		point="operations">
 		<operation class="org.nuxeo.s3utils.operations.S3DownloadOp" />
 		<operation class="org.nuxeo.s3utils.operations.S3UploadOp" />
+        <operation class="org.nuxeo.s3utils.operations.S3DeleteOp" />
 	</extension>
 
 </component>

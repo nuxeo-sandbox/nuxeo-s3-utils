@@ -2,52 +2,149 @@
 
 QA build status: [![Build Status](https://qa.nuxeo.org/jenkins/buildStatus/icon?job=Sandbox/sandbox_nuxeo-s3-utils-master)](https://qa.nuxeo.org/jenkins/buildStatus/icon?job=Sandbox/sandbox_nuxeo-s3-utils-master)
 
-This add-on for [Nuxeo](http://www.nuxeo.com) contains utilities for AWS S3
+This add-on for [Nuxeo](http://www.nuxeo.com) contains utilities for AWS S3: Operations to upload or download a file, utilities to build a temporary signed URL to S3, and a helper SEAM Bean.
 
-2016-04-24: **WARNING** This README is not up-to-date. It is missing the following explanations:
+## Set Up: Configuration
+### Principles
+The plugin creates a `S3Handler` tool, that is in charge of performing the actions (download, upload, ...). It connects to S3 using your key ID, secret key and the S3 bucket.
 
-1. It exposes a _service_ with an _extension point_, allowing to use several S3 repos instead of just one. So you can contribute several "S3Handler" via XML contributions
-2. It adds two operations, one to upload a file to S3, one to download a file from S3
+In order to allow connecting to several S3 accounts, and inside an S3 account, to several buckets, the plugin exposes a _service_, allowing you to access different accounts and buckets: You contribute as many S3 Handlers as you need, given each of them a unique name.
 
-Until this README is updated, please look at the JavaDo and the unit-tests. And sorry for the inconvenience :-/
-
-# Setup
-In order to access your AWS S3, the following properties _must_ be set in the configuration file (nuxeo.conf):
-
-```
-nuxeo.aws.s3utils.keyid=HERE_THE_KEY_ID
-nuxeo.aws.s3utils.secret=HERE_THE_SECRET_KEY
-```
-
-You can also set a bucket name, that will be the default bucket, used when, in some API, no bucket is used in the parameters:
+### Contribute the S3Utils Service
+Fo each S3 account and bucket you want to access, just add the following contribution to your Nuxeo Studio project (Advanced Settings > XML Extension). Values are explain below.
 
 ```
-nuxeo.aws.s3utils.bucket=HERE_THE_BUCKET
+<extension target="org.nuxeo.s3utils.service" point="configuration">
+  <s3Handler>
+    <name>HANDLER_NAME</name>
+    <class>org.nuxeo.s3utils.S3HandlerImpl</class>
+    <awsKey>YOUR_KEY</awsKey>
+    <awsSecret>YOUR_SECRET</awsSecret>
+    <bucket>THE_BUCKET</bucket>
+    <tempSignedUrlDuration>DURATION_IN_SECONDS</tempSignedUrlDuration>
+    <useCacheForExistsKey>true or flase</useCacheForExistsKey>
+  </s3Handler>
+</extension>
+```
+Replace the values with yours:
+
+* `name`: The unique name of your handler. To be used in some operations
+* `class`: Do not change this one, keep`org.nuxeo.s3utils.S3HandlerImpl` (unless you write your own handler, see the code)
+* `awsKey`: The key to access your S3 account
+* `awsSecret`: The secret to access your S3 account
+* `bucket`: The bucket to use for this S3 account
+* `tempSignedUrlDuration`:
+  * The duration, in seconds, of a temporary signed URL.
+  * Optional: If not passed or negative, a default value of 1200 (2 minutes) applies
+* `useCacheForExistsKey`:
+  * pass `true` or `false`. Tell the plugin to use a cache when checking the existence of a key in the S3 bucket, to avoid calling S3 too often.
+  * Default value is `false`
+
+### Use `nuxeo.conf`
+It may be interesting to read the value from `nuxeo.conf`. This way, you can deploy the same Studio projet in different environments (typically Dev/Test/Prod), each of them using a different set of keys and buckets.
+
+For this purpose:
+
+1. Declare your custom configuration parameters in nuxeo.conf
+2. Use them in the XML declaration, using the templating language: `${your.custom.key:=}`
+
+## Set Up: An Example
+Using `nuxeo.conf` and XML Extension.
+
+We are going to setup 2 handlers accessing the same S3 account, but two different buckets.
+ 
+1. In `nuxeo.conf`, we add the following:
+
+```
+mycompany.s3.keyid=123456
+mycompany.s3.secret=HERE_THE_SECRET_KEY
+mycompany.s3.bucketOne=the-bucket
+mycompany.s3.bucketTwo=the-other-bucket
 ```
 
-Last, you can setup a default duration, in seconds, for the "Temporary Signed URL" feature":
+2. In our Studio project, we create two XML extension
+  * First one (notice: Give whatever name you want to the XML Extension itself) uses the key, the secret and "the-bucket"
 
 ```
-# One hour:
-nuxeo.aws.s3utils.duration=3600
+<extension target="org.nuxeo.s3utils.service" point="configuration">
+  <s3Handler>
+    <name>S3-Bucket-one</name>
+    <class>org.nuxeo.s3utils.S3HandlerImpl</class>
+    <awsKey>${mycompany.s3.keyid:=}</awsKey>
+    <awsSecret>${mycompany.s3.secret:=}</awsSecret>
+    <bucket>${mycompany.s3.bucketOne:=}</bucket>
+    <!-- Let default values for other parameters -->
+  </s3Handler>
+</extension>
 ```
 
-NOTE: If this value is not set and no duration is passed to some API, an internal default value of 20 minutes applies.
+ * Second one uses the key, the secret, "the-other-bucket", and only one minute of duration for the temporary signed URLs:
+
+```
+<!-- Let default values for other parameters -->
+<extension target="org.nuxeo.s3utils.service" point="configuration">
+  <s3Handler>
+    <name>S3-Bucket-Two</name>
+    <class>org.nuxeo.s3utils.S3HandlerImpl</class>
+    <awsKey>${mycompany.s3.keyid:=}</awsKey>
+    <awsSecret>${mycompany.s3.secret:=}</awsSecret>
+    <bucket>${mycompany.s3.bucketTwo:=}</bucket>
+    <tempSignedUrlDuration>60</tempSignedUrlDuration>
+  </s3Handler>
+</extension>
+```
+
+Now, we can use the "S3-Bucket-one" or the "S3-Bucket-Two" handlers.
+
+## Features
+### Operations
+The plugin contributes the following operations to be used in an Automation Chain:
+
+* **Files > S3 Utils: Upload** (ID: `S3Utils.Upload`)
+  * Upload a file to S3
+  * Accepts `Document` or `Blob`, returns the input unchanged
+  * Parameters:
+    * `handlerName`: The name of the S3Handler to use (see examples above)
+    * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
+    * `key`: The key to use for S3 storage
+    * `xpath`: When the input is `Document`, the field to use. Default value is the main blob, `file:content`.
 
 
+* **Files > S3 Utils: Download** (ID: `S3Utils.Download`)
+  * Input is `void`, downloads a file from S3, returns a `Blob` of the file
+  * Parameters:
+    * `handlerName`: The name of the S3Handler to use (see examples above)
+    * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
+    * `key`: The key of the file on S3
 
 
-# Temporary Signed URL
+* **Files > S3 Utils: Delete** (ID: `S3Utils.Delete`)
+  * Input is `void`, deletes a file from S3, returns void
+  * Sets a new context variable with the result: `s3UtilsDeletionResult` will contain `"true"` if the key was deleted on S3, or `"false"` if it could not be deleted.
+  * Parameters:
+    * `handlerName`: The name of the S3Handler to use (see examples above)
+    * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
+    * `key`: The key of the file on S3
 
-### The `S3TempSignedURLBuilder` Class 
-The `S3TempSignedURLBuilder` class lets you build a temporary signed URL to an S3 object. As you can see in the JavaDoc and/or in the source, you can get such URL passing just the distant object Key (which is, basiclaly, its relative path). You can also use more parameters: The bucket, the duration (in seconds), the content-type and content-disposition.
+#### How to Import these Operations in your Project?
+The principles are:
+
+* Get the JSON definition of the operation(s) you need
+* Add it to the "Operations Registry" in Studio
+
+You can find an example here: https://doc.nuxeo.com/nxdoc/how-to-use-pdf-conversion-operations-with-studio/.
+
+### Temporary Signed URL
+
+#### The `S3TempSignedURLBuilder` Class 
+The `S3TempSignedURLBuilder` class lets you build a temporary signed URL to an S3 object. As you can see in the JavaDoc and/or in the source, you can get such URL passing just the distant object Key (which is, basically, its relative path). You can also use more parameters: The bucket, the duration (in seconds), the content-type and content-disposition.
 
 Content-Type and Content-Disposition should be used, especially if the distant object has no file extension.
 
 The class also has a utility to test the existence of a key on S3.
 
 
-### The `s3utilsHelper` Bean
+#### The `s3utilsHelper` Bean
 
 This bean exposes the following functions to be typically used in an XHTML file:
 
@@ -61,7 +158,7 @@ This bean exposes the following functions to be typically used in an XHTML file:
 
 * `#{s3UtilsHelper.getS3TempSignedUrl("bucket", "objectKey", duration, "content type", "content disposition")}`
 
-  This is the call with all the parameters. Default values will apply: if `busket` is empty the code uses the busket defined in the configuration, if `duration` is less than 1 the code uses the duration of the configuraiton file or a hard coded duration, and `contentType`and `contentDisposition` can be empty (no default value uses)
+  This is the call with all the parameters. Default values will apply: if `busket` is empty the code uses the busket defined in the configuration, if `duration` is less than 1 the code uses the duration of the configuration file or a hard coded duration, and `contentType`and `contentDisposition` can be empty (no default value uses)
   
 * `#{s3UtilsHelper.existsKey("objectKey")` and `#{s3UtilsHelper.existsKey("bucket", "objectKey")`
   
@@ -69,7 +166,7 @@ This bean exposes the following functions to be typically used in an XHTML file:
   
 
 
-A typicall use would be a Widget template. This widget would allow the user to download a file from S3, using a temporary signed url to an object whose ID is stored in a field of the current document.
+A typical use would be a Widget template. This widget would allow the user to download a file from S3, using a temporary signed url to an object whose ID is stored in a field of the current document.
 
 So, for example, say you want to display an hyperlink to the file, and the object key is stored in the `s3info:s3_object_key` custom field. You then create the "s3TempSignedHyperLink.xhtml" file with this content:
 
@@ -128,7 +225,7 @@ Here is another example of XHTML that first tests if the object exists. If yes, 
 </div>
 ```
 
-# Build and Install
+## Build and Install
 
 Assuming [maven](http://maven.apache.org/) (3.2.5) is installed on your system, after downloading the whole repository, execute the following:
 
@@ -155,22 +252,17 @@ The NuxeoPackage is in `nuxeo-s3-utils-mp/target`, named `nuxeo-s3-utils-mp-{ver
 
 
 
-## License
-(C) Copyright 2015 Nuxeo SA (http://nuxeo.com/) and others.
+## Licensing
 
-All rights reserved. This program and the accompanying materials
-are made available under the terms of the GNU Lesser General Public License
-(LGPL) version 2.1 which accompanies this distribution, and is available at
-http://www.gnu.org/licenses/lgpl-2.1.html
+[Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
 
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-Lesser General Public License for more details.
-
-Contributors:
-Thibaud Arguillere (https://github.com/ThibArg)
 
 ## About Nuxeo
 
-Nuxeo provides a modular, extensible Java-based [open source software platform for enterprise content management](http://www.nuxeo.com) and packaged applications for Document Management, Digital Asset Management and Case Management. Designed by developers for developers, the Nuxeo platform offers a modern architecture, a powerful plug-in model and extensive packaging capabilities for building content applications.
+Nuxeo dramatically improves how content-based applications are built, managed and deployed, making customers more agile, innovative and successful. Nuxeo provides a next generation, enterprise ready platform for building traditional and cutting-edge content oriented applications. Combining a powerful application development environment with SaaS-based tools and a modular architecture, the Nuxeo Platform and Products provide clear business value to some of the most recognizable brands including Verizon, Electronic Arts, Sharp, FICO, the U.S. Navy, and Boeing. Nuxeo is headquartered in New York and Paris
+
+More information is available at [www.nuxeo.com](http://www.nuxeo.com).
+
+## Contributors
+
+Thibaud Arguillere (https://github.com/ThibArg)

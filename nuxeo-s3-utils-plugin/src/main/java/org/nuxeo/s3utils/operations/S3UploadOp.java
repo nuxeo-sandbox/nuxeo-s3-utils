@@ -27,10 +27,8 @@ import org.nuxeo.ecm.automation.core.annotations.Context;
 import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
-import org.nuxeo.ecm.automation.core.util.BlobList;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.DocumentModel;
-import org.nuxeo.ecm.core.api.DocumentModelList;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.s3utils.S3Handler;
 import org.nuxeo.s3utils.S3HandlerServiceImpl;
@@ -43,7 +41,7 @@ import org.nuxeo.s3utils.S3HandlerServiceImpl;
  * Returns the input unchanged.
  * <p>
  * The key is required, it gives the path where the blob must be stored.
- * 
+ *
  * @since 8.1
  */
 @Operation(id = S3UploadOp.ID, category = Constants.CAT_BLOB, label = "S3 Utils: Upload", description = "Uploads the blob(s) to s3, using S3Handler <code>handlerName</code> (if empty, uses the default handler). If <code>bucket</code> is empty, uses the bucket set in the handler configuration. Returns the input unchanged. If the input is Document(s), uses the blob found in the xpath parameter")
@@ -106,28 +104,6 @@ public class S3UploadOp {
     }
 
     @OperationMethod
-    public BlobList run(BlobList blobs) throws NuxeoException, IOException {
-
-        if (blobs != null && blobs.size() > 0) {
-
-            setup();
-
-            File f;
-            for (Blob b : blobs) {
-                if (b != null) {
-                    f = b.getFile();
-                    if (f != null) {
-                        @SuppressWarnings("unused")
-                        boolean ignore = s3Handler.sendFile(key, f);
-                    }
-                }
-            }
-        }
-
-        return blobs;
-    }
-
-    @OperationMethod
     public DocumentModel run(DocumentModel doc) throws NuxeoException, IOException {
 
         if (doc != null) {
@@ -139,31 +115,6 @@ public class S3UploadOp {
 
         }
         return doc;
-    }
-
-    @OperationMethod
-    public DocumentModelList run(DocumentModelList docs) throws NuxeoException, IOException {
-
-        if (docs != null) {
-
-            setup();
-
-            Blob b;
-            File f;
-            for (DocumentModel doc : docs) {
-
-                b = (Blob) doc.getPropertyValue(xpath);
-                if (b != null) {
-                    f = b.getFile();
-                    if (f != null) {
-                        @SuppressWarnings("unused")
-                        boolean ignore = s3Handler.sendFile(key, f);
-                    }
-                }
-            }
-
-        }
-        return docs;
     }
 
 }

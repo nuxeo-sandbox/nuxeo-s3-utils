@@ -29,18 +29,41 @@ import org.nuxeo.runtime.test.runner.SimpleFeature;
 import org.nuxeo.s3utils.Constants;
 
 /**
- * Important: To test the feature, we don't want to hard code the AWS keys (since this code could be published on GitHub
- * for example) and we don't want to hard code the bucket name or the distant object key, since everyone will have a
- * different one. So, the principles used are the following:
+ * Important: To test the feature, we don't want to hard code the AWS keys
+ * (since this code could be published on GitHub for example) and we don't want
+ * to hard code the bucket name or the distant object key, since everyone will
+ * have a different one. There are two ways to inject the values for testing:
  * <ul>
- * <li>We have a file named aws-test.conf at nuxeo-s3utils-plugin/src/test/resources/</li>
- * <li>The file contains the keys, the bucket, distant object key, ... using the kesy defined below
- * (TEST_CONF_KEY_NAME_AWS_KEY_ID, etc.)</li>
- * <li>The .gitignore config file ignores this file, so it is not sent on GitHub</li>
+ * <li>Use environment variables: Setup your environment and inject the expected
+ * variables. This would be used when automating testing with maven for example
+ * (passing the env. variables to maven)</li>
+ *
+ * <li>Use the (git ignored) "aws-test.conf" file:
+ * <ul>
+ * <li>We have a file named aws-test.conf at
+ * nuxeo-s3utils-plugin/src/test/resources/</li>
+ * <li>The file contains the keys, the bucket, distant object key, ... using the
+ * keys defined below (TEST_CONF_KEY_NAME_AWS_KEY_ID, etc.)</li>
+ * <li>The .gitignore config file ignores this file, so it is not sent on
+ * GitHub</li>
  * </ul>
- * So, basically to run the test, create this file at nuxeo-s3utils-plugin/src/test/resources/ and set the following
- * properties:
- * 
+ *
+ * </li>
+ * </ul>
+ *
+ *
+ * So, the principles used are the following:
+ * <ul>
+ * <li>We have a file named aws-test.conf at
+ * nuxeo-s3utils-plugin/src/test/resources/</li>
+ * <li>The file contains the keys, the bucket, distant object key, ... using the
+ * kesy defined below (TEST_CONF_KEY_NAME_AWS_KEY_ID, etc.)</li>
+ * <li>The .gitignore config file ignores this file, so it is not sent on
+ * GitHub</li>
+ *
+ * So, basically to run the test, create this file at
+ * nuxeo-s3utils-plugin/src/test/resources/ and set the following properties:
+ *
  * <pre>
  * {@code
  * test.aws.key=HERE_THE_KEY_ID
@@ -52,91 +75,115 @@ import org.nuxeo.s3utils.Constants;
  * test.upload.file.key=Brief.pdf
  * }
  * </pre>
- * <p>
- * These properties will be loaded and set in the environment, so the "default" S3Handler contribution (see
+ * </ul>
+ *
+ * Whatever you choose, the properties will be loaded and set in the
+ * environment, so the "default" S3Handler contribution (see
  * s3-utils-service.xml) will use them.
- * 
+ *
  * @since 8.1
  */
 public class SimpleFeatureCustom extends SimpleFeature {
 
-    public static final String TEST_CONF_FILE = "aws-test.conf";
+	public static final String TEST_CONF_FILE = "aws-test.conf";
 
-    public static final String TEST_CONF_KEY_NAME_AWS_KEY_ID = "test.aws.key";
+	public static final String TEST_CONF_KEY_NAME_AWS_KEY_ID = "test.aws.key";
 
-    public static final String TEST_CONF_KEY_NAME_AWS_SECRET = "test.aws.secret";
+	public static final String TEST_CONF_KEY_NAME_AWS_SECRET = "test.aws.secret";
 
-    public static final String TEST_CONF_KEY_NAME_AWS_S3_BUCKET = "test.aws.s3.bucket";
+	public static final String TEST_CONF_KEY_NAME_AWS_S3_BUCKET = "test.aws.s3.bucket";
 
-    public static final String TEST_CONF_KEY_NAME_USE_CACHE = "test.use.cache";
+	public static final String TEST_CONF_KEY_NAME_USE_CACHE = "test.use.cache";
 
-    public static final String TEST_CONF_KEY_NAME_OBJECT_KEY = "test.object.key";
+	public static final String TEST_CONF_KEY_NAME_OBJECT_KEY = "test.object.key";
 
-    public static final String TEST_CONF_KEY_NAME_OBJECT_SIZE = "test.object.size";
+	public static final String TEST_CONF_KEY_NAME_OBJECT_SIZE = "test.object.size";
 
-    public static final String TEST_CONF_KEY_NAME_UPLOAD_FILE_KEY = "test.upload.file.key";
+	public static final String TEST_CONF_KEY_NAME_UPLOAD_FILE_KEY = "test.upload.file.key";
 
-    protected static Properties props = null;
+	protected static Properties props = null;
 
-    public static String getLocalProperty(String key) {
+	public static String getLocalProperty(String key) {
 
-        if (props != null) {
-            return props.getProperty(key);
-        }
+		if (props != null) {
+			return props.getProperty(key);
+		}
 
-        return null;
-    }
+		return null;
+	}
 
-    public static boolean hasLocalTestConfiguration() {
-        return props != null;
-    }
+	public static boolean hasLocalTestConfiguration() {
+		return props != null;
+	}
 
-    @Override
-    public void initialize(FeaturesRunner runner) throws Exception {
+	@Override
+	public void initialize(FeaturesRunner runner) throws Exception {
 
-        File file = null;
-        FileInputStream fileInput = null;
-        try {
-            file = FileUtils.getResourceFileFromContext(TEST_CONF_FILE);
-            fileInput = new FileInputStream(file);
-            props = new Properties();
-            props.load(fileInput);
+		File file = null;
+		FileInputStream fileInput = null;
+		try {
+			file = FileUtils.getResourceFileFromContext(TEST_CONF_FILE);
+			fileInput = new FileInputStream(file);
+			props = new Properties();
+			props.load(fileInput);
 
-        } catch (Exception e) {
-            props = null;
-        } finally {
-            if (fileInput != null) {
-                try {
-                    fileInput.close();
-                } catch (IOException e) {
-                    // Ignore
-                }
-                fileInput = null;
-            }
-        }
+		} catch (Exception e) {
+			props = null;
+		} finally {
+			if (fileInput != null) {
+				try {
+					fileInput.close();
+				} catch (IOException e) {
+					// Ignore
+				}
+				fileInput = null;
+			}
+		}
 
-        if (props != null) {
+		if (props == null) {
+			// Try to get environment variables
+			addEnvironmentVariable(TEST_CONF_KEY_NAME_AWS_KEY_ID);
+			addEnvironmentVariable(TEST_CONF_KEY_NAME_AWS_SECRET);
+			addEnvironmentVariable(TEST_CONF_KEY_NAME_AWS_S3_BUCKET);
+			addEnvironmentVariable(TEST_CONF_KEY_NAME_USE_CACHE);
+			addEnvironmentVariable(TEST_CONF_KEY_NAME_OBJECT_KEY);
+			addEnvironmentVariable(TEST_CONF_KEY_NAME_OBJECT_SIZE);
+			addEnvironmentVariable(TEST_CONF_KEY_NAME_UPLOAD_FILE_KEY);
+		}
 
-            Properties systemProps = System.getProperties();
-            systemProps.setProperty(Constants.CONF_KEY_NAME_ACCESS_KEY,
-                    props.getProperty(TEST_CONF_KEY_NAME_AWS_KEY_ID));
-            systemProps.setProperty(Constants.CONF_KEY_NAME_SECRET_KEY,
-                    props.getProperty(TEST_CONF_KEY_NAME_AWS_SECRET));
-            systemProps.setProperty(Constants.CONF_KEY_NAME_BUCKET, props.getProperty(TEST_CONF_KEY_NAME_AWS_S3_BUCKET));
-            systemProps.setProperty(Constants.CONF_KEY_NAME_USECACHEFOREXISTSKEY,
-                    props.getProperty(TEST_CONF_KEY_NAME_USE_CACHE));
+		if (props != null) {
 
-        }
-    }
+			Properties systemProps = System.getProperties();
+			systemProps.setProperty(Constants.CONF_KEY_NAME_ACCESS_KEY,
+					props.getProperty(TEST_CONF_KEY_NAME_AWS_KEY_ID));
+			systemProps.setProperty(Constants.CONF_KEY_NAME_SECRET_KEY,
+					props.getProperty(TEST_CONF_KEY_NAME_AWS_SECRET));
+			systemProps.setProperty(Constants.CONF_KEY_NAME_BUCKET,
+					props.getProperty(TEST_CONF_KEY_NAME_AWS_S3_BUCKET));
+			systemProps.setProperty(Constants.CONF_KEY_NAME_USECACHEFOREXISTSKEY,
+					props.getProperty(TEST_CONF_KEY_NAME_USE_CACHE));
 
-    @Override
-    public void stop(FeaturesRunner runner) throws Exception {
+		}
+	}
 
-        Properties p = System.getProperties();
-        p.remove(Constants.CONF_KEY_NAME_ACCESS_KEY);
-        p.remove(Constants.CONF_KEY_NAME_SECRET_KEY);
-        p.remove(Constants.CONF_KEY_NAME_BUCKET);
-        p.remove(Constants.CONF_KEY_NAME_USECACHEFOREXISTSKEY);
-    }
+	@Override
+	public void stop(FeaturesRunner runner) throws Exception {
+
+		Properties p = System.getProperties();
+		p.remove(Constants.CONF_KEY_NAME_ACCESS_KEY);
+		p.remove(Constants.CONF_KEY_NAME_SECRET_KEY);
+		p.remove(Constants.CONF_KEY_NAME_BUCKET);
+		p.remove(Constants.CONF_KEY_NAME_USECACHEFOREXISTSKEY);
+	}
+
+	protected void addEnvironmentVariable(String key) {
+		String value = System.getenv(key);
+		if(value != null) {
+			if(props == null) {
+				props = new Properties();
+			}
+			props.put(key, value);
+		}
+	}
 
 }
