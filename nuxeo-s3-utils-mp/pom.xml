@@ -4,34 +4,26 @@
 	<parent>
 		<groupId>nuxeo-s3-utils</groupId>
 		<artifactId>nuxeo-s3-utils-parent</artifactId>
-		<version>8.3-SNAPSHOT</version>
+		<version>8.10-SNAPSHOT</version>
 	</parent>
 	<artifactId>nuxeo-s3-utils-mp</artifactId>
 	<packaging>zip</packaging>
 	<name>Market Place Package for Nuxeo s3-utils</name>
 	<description/>
-	<dependencyManagement>
-		<dependencies>
-			<!-- Import Nuxeo BOM -->
-			<dependency>
-				<groupId>org.nuxeo.ecm.distribution</groupId>
-				<artifactId>nuxeo-distribution</artifactId>
-				<version>${nuxeo.distribution.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
 	<dependencies>
 		<!-- Base distribution(s) for the MP -->
-		<dependency>
-			<groupId>org.nuxeo.ecm.distribution</groupId>
-			<artifactId>nuxeo-distribution-cap</artifactId>
-			<!-- <artifactId>nuxeo-distribution-coreserver</artifactId> -->
-			<!-- <artifactId>nuxeo-distribution-dm</artifactId> -->
-			<!-- <artifactId>nuxeo-distribution-dam</artifactId> -->
-			<type>pom</type>
-		</dependency>
+	    <dependency>
+	      <groupId>org.nuxeo.ecm.distribution</groupId>
+	      <artifactId>nuxeo-nxr-server</artifactId>
+	      <type>pom</type>
+	    </dependency>
+	    <dependency>
+	      <groupId>org.nuxeo.ecm.distribution</groupId>
+	      <artifactId>nuxeo-nxr-server</artifactId>
+	      <type>zip</type>
+	      <scope>provided</scope>
+	    </dependency>
+
 		<!-- Additional bundles to be deployed by the MP -->
 		<dependency>
 			<groupId>nuxeo-s3-utils</groupId>
@@ -40,17 +32,6 @@
 		</dependency>
 	</dependencies>
 	<build>
-		<!-- Copy pluginManagement from org.nuxeo:nuxeo-ecm if not inheriting -->
-		<!-- <pluginManagement> -->
-		<!-- <plugins> -->
-		<!-- <plugin> -->
-		<!-- <groupId>org.nuxeo.build</groupId> -->
-		<!-- <artifactId>ant-assembly-maven-plugin</artifactId> -->
-		<!-- <version>${ant.assembly.version}</version> -->
-		<!-- <extensions>true</extensions> -->
-		<!-- </plugin> -->
-		<!-- </plugins> -->
-		<!-- </pluginManagement> -->
 		<plugins>
 			<plugin>
 				<groupId>org.nuxeo.build</groupId>
