@@ -27,16 +27,16 @@ import org.nuxeo.runtime.model.DefaultComponent;
 
 /**
  * IMplementaiton of service: Loads contributions, initializes handlers, ...
- * 
+ *
  * @since 8.2
  */
 public class S3HandlerServiceImpl extends DefaultComponent implements S3HandlerService {
 
     protected static final String XP = "configuration";
-    
+
     protected HashMap<String, S3HandlerDescriptor> contributions = new HashMap<String, S3HandlerDescriptor>();
     protected HashMap<String, S3Handler> s3Handlers = new HashMap<String, S3Handler>();
-    
+
     // ==========================================================
     // ==================== DefaultComponent ====================
     // ==========================================================
@@ -51,7 +51,7 @@ public class S3HandlerServiceImpl extends DefaultComponent implements S3HandlerS
     public void activate(ComponentContext context) {
         super.activate(context);
     }
-    
+
     /**
      * Component deactivated notification.
      * Called before a component is unregistered.
@@ -61,10 +61,10 @@ public class S3HandlerServiceImpl extends DefaultComponent implements S3HandlerS
      */
     @Override
     public void deactivate(ComponentContext context) {
-        super.activate(context);
+        super.deactivate(context);
         contributions.clear();
     }
-    
+
     @Override
     public void registerContribution(Object contribution, String extensionPoint, ComponentInstance contributor) {
         if (XP.equals(extensionPoint)) {
@@ -86,13 +86,13 @@ public class S3HandlerServiceImpl extends DefaultComponent implements S3HandlerS
             }
         }
     }
-    
+
     protected void registerS3Handler(S3HandlerDescriptor desc) {
         contributions.put(desc.getName(), desc);
         // lookup now to have immediate feedback on error
         getS3Handler(desc.getName());
     }
-    
+
     protected void unregisterS3Handler(S3HandlerDescriptor desc) {
         contributions.remove(desc.getName());
         S3Handler handler = s3Handlers.get(desc.getName());
@@ -101,22 +101,22 @@ public class S3HandlerServiceImpl extends DefaultComponent implements S3HandlerS
             s3Handlers.remove(desc.getName());
         }
     }
-    
+
     // ==========================================================
     // ==================== S3HandlerService ====================
     // ==========================================================
     /**
      * Returns the S3Handler given it's name. Returns <code>null</code> if not found.
-     * 
+     *
      * @param name
      * @return the contributed S3Handler
      * @since 8.2
      */
     @Override
     public synchronized S3Handler getS3Handler(String name) {
-        
-        S3Handler handler = (S3Handler) s3Handlers.get(name);
-        
+
+        S3Handler handler = s3Handlers.get(name);
+
         if(handler == null) {
             S3HandlerDescriptor desc = contributions.get(name);
             if (desc == null) {
@@ -139,11 +139,11 @@ public class S3HandlerServiceImpl extends DefaultComponent implements S3HandlerS
             } catch(NuxeoException e) {
                 throw new RuntimeException(e);
             }
-            
+
             s3Handlers.put(name, handler);
         }
-        
-        
+
+
         return handler;
     }
 
