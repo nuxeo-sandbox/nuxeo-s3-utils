@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * Contributors:
- *     Thiabud Arguillere
+ *     Thibaud Arguillere
  */
 package org.nuxeo.s3utils;
 
@@ -43,7 +43,7 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 
 /**
  * Wrapper class around AmazonS3
- * 
+ *
  * @since 8.1
  */
 public class S3HandlerImpl implements S3Handler {
@@ -171,7 +171,8 @@ public class S3HandlerImpl implements S3Handler {
         return ok;
     }
 
-    public String buildPresignedUrl(String inBucket, String inKey, int durationInSeconds, String contentType,
+    @Override
+	public String buildPresignedUrl(String inBucket, String inKey, int durationInSeconds, String contentType,
             String contentDisposition) throws NuxeoException {
 
         if (StringUtils.isBlank(inBucket)) {
@@ -224,7 +225,7 @@ public class S3HandlerImpl implements S3Handler {
     public boolean existsKeyInS3(String inBucket, String inKey) {
 
         boolean exists = false;
-        
+
         if(StringUtils.isBlank(inBucket)) {
             inBucket = currentBucket;
         }
@@ -245,7 +246,7 @@ public class S3HandlerImpl implements S3Handler {
 
     @Override
     public boolean existsKeyInS3(String inKey) {
-        
+
         return existsKeyInS3(null, inKey);
     }
 
@@ -283,11 +284,13 @@ public class S3HandlerImpl implements S3Handler {
         return s3;
     }
 
-    public String getBucket() {
+    @Override
+	public String getBucket() {
         return currentBucket;
     }
 
-    public int getSignedUrlDuration() {
+    @Override
+	public int getSignedUrlDuration() {
         return signedUrlDuration;
     }
 

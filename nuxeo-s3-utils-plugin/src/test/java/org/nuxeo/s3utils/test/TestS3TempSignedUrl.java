@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * Contributors:
- *     Thiabud Arguillere
+ *     Thibaud Arguillere
  */
 package org.nuxeo.s3utils.test;
 
@@ -41,7 +41,7 @@ import org.nuxeo.s3utils.S3Handler;
 
 /**
  * See {@link SimpleFeatureCustom} for explanation about the local configuration file used for testing.
- * 
+ *
  * @since 7.10
  */
 @RunWith(FeaturesRunner.class)
@@ -63,12 +63,12 @@ public class TestS3TempSignedUrl {
             TEST_FILE_KEY = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY);
             assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY,
                     StringUtils.isNotBlank(TEST_FILE_KEY));
-            
+
             String sizeStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE);
             assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE,
                     StringUtils.isNotBlank(sizeStr));
             TEST_FILE_SIZE = Long.parseLong(sizeStr);
-            
+
             s3Handler = S3Handler.getS3Handler(Constants.DEFAULT_HANDLER_NAME);
         }
 

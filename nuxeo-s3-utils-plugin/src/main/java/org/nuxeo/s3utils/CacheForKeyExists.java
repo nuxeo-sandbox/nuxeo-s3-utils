@@ -27,7 +27,7 @@ import org.apache.commons.lang.StringUtils;
 
 /**
  * This class caches S3 keys and their existence on S3 for a given S3Handler. This is to avoid checking a key too often
- * 
+ *
  * @since 7.10
  */
 public class CacheForKeyExists {
@@ -56,8 +56,8 @@ public class CacheForKeyExists {
     }
 
     /**
-     * This method <b>must</i> be called to properly cleanup memory and release cross reference to the S3Handler
-     * 
+     * This method <b>must</i> be called to properly cleanup memory and release cross references to the S3Handler
+     *
      * @since 8.2
      */
     public void cleanup() {
@@ -143,7 +143,7 @@ public class CacheForKeyExists {
 
     /**
      * Returns true is the key in the bucket is in the cache. If the bucket is empty, uses the "current bucket"
-     * 
+     *
      * @param bucket
      * @param objectKey
      * @return true if (bucket + key) are in the cache
@@ -157,7 +157,7 @@ public class CacheForKeyExists {
 
     /**
      * Returns true is the key in the bucket is in the cache. Uses the "current bucket"
-     * 
+     *
      * @param objectKey
      * @return true if (bucket + key) are in the cache
      * @since 8.2
@@ -170,7 +170,7 @@ public class CacheForKeyExists {
      * Checks if the key exists on S3, after first checking if it is in the cache
      * <p>
      * See {@link existsKey(String bucket, String objectKey)}
-     * 
+     *
      * @param objectKey
      * @return true is the key exists on S3
      * @since 8.1
@@ -186,7 +186,7 @@ public class CacheForKeyExists {
      * <li>First, checks the key in the cache</li>
      * <li>If not found, checks on S3 and adds the info to the cache</li>
      * </ul>
-     * 
+     *
      * @param objectKey
      * @return true is the key exists on S3
      * @since 8.1
@@ -217,7 +217,7 @@ public class CacheForKeyExists {
 
     /**
      * Returns the number of elements in the cache.
-     * 
+     *
      * @return the number of elements in the cache
      * @since 8.2
      */
@@ -227,7 +227,7 @@ public class CacheForKeyExists {
 
     /**
      * Set the bucket to use by default. If inBucket is empty, value is reset to the bucket stored in the S33Handler
-     * 
+     *
      * @param inBucket
      * @since 8.2
      */
@@ -237,7 +237,7 @@ public class CacheForKeyExists {
 
     /**
      * Returns the maximum objects stored in the cache. Default is {@link MAX_KEYS}
-     * 
+     *
      * @return the maximum objects stored in the cache
      * @since 8.2
      */
@@ -247,7 +247,7 @@ public class CacheForKeyExists {
 
     /**
      * If maxInCache is <= 0, the default value applies
-     * 
+     *
      * @param maxInCache
      * @since 8.2
      */
@@ -257,7 +257,7 @@ public class CacheForKeyExists {
 
     /**
      * Returns the durations of an object in the cache, in milliseconds
-     * 
+     *
      * @return the duration in the cache
      * @since 8.2
      */
@@ -267,12 +267,12 @@ public class CacheForKeyExists {
 
     /**
      * If durationInCacheMillisecs is <= 0, the default value applies ({@link DURATION_IN_CACHE_MS})
-     * 
+     *
      * @param durationInCache
      * @since 8.1
      */
     public void setDurationInCache(int durationInCacheMillisecs) {
-        this.durationInCache = durationInCacheMillisecs <= 0 ? DURATION_IN_CACHE_MS : durationInCacheMillisecs;
+        durationInCache = durationInCacheMillisecs <= 0 ? DURATION_IN_CACHE_MS : durationInCacheMillisecs;
     }
 
 }

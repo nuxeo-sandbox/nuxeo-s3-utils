@@ -34,7 +34,7 @@ import com.amazonaws.services.s3.AmazonS3;
  * <p>
  * Some comments talk about the "current bucket". it is the bucket set in the XML contribution (S3HandlerDescriptor), or
  * the bucket explicitly set via <code>setBucket()</code>
- * 
+ *
  * @since 8.2
  */
 public interface S3Handler {
@@ -42,8 +42,8 @@ public interface S3Handler {
     /**
      * Called after a new instance has been created.
      * <p>
-     * <i>IMPORTANT</i>: Your S3Handler _must_ use this class, the S3HandlerService will call it.
-     * 
+     * <i>IMPORTANT</i>: Your S3Handler must use this class, the S3HandlerService will call it.
+     *
      * @param desc
      * @throws NuxeoException
      * @since 8.2
@@ -54,18 +54,18 @@ public interface S3Handler {
      * Called when the S3Handler is removed. Notice that this should not happen very often. Most of the time, if not
      * every time, S3HandlerService creates and initializes the contributed handles at startup and releases them when
      * the server is shut down.
-     * 
+     *
      * @since 8.2
      */
     public void cleanup();
 
     /**
-     * The handler uses the bucket as set in the S3HandlerDescriptor at initialization time. BUt this can be changed
+     * The handler uses the bucket as set in the S3HandlerDescriptor at initialization time. But this can be modified
      * dynamically.
      * <p>
      * Notice that an easy way to handle different buckets on the same S3 instance is to contribute different S3Handler
-     * in the XML. Thgis way, there is no need to swithc buckets, just use the correct handler.
-     * 
+     * in the XML. This way, there is no need to switch buckets, just use the correct handler.
+     *
      * @param inBucket
      * @since 8.2
      */
@@ -79,7 +79,7 @@ public interface S3Handler {
 
     /**
      * Uploads inFile to S3, using the "Current bucket"
-     * 
+     *
      * @param inKey
      * @param inFile
      * @return true if the file could be uploaded with no error
@@ -92,7 +92,7 @@ public interface S3Handler {
      * Downloads the file from S3 using the "current bucket".
      * <p>
      * <code>fileName</code> should be optional (not required by the interface)
-     * 
+     *
      * @param inKey
      * @param inFileName
      * @return a Blob of the downloaded file
@@ -103,7 +103,7 @@ public interface S3Handler {
 
     /**
      * Deletes the file from S3 using the "current bucket", returns true if succesful
-     * 
+     *
      * @param inKey
      * @return
      * @throws NuxeoException
@@ -122,7 +122,7 @@ public interface S3Handler {
      * The interface allows <code>contentType</code> and <code>contentDisposition</code> to be empty. But it is
      * recommended to set them to make sure the is no ambiguity when the URL is used (a key without a file extension for
      * example)
-     * 
+     *
      * @param objectKey
      * @param durationInSeconds
      * @param contentType
@@ -145,7 +145,7 @@ public interface S3Handler {
      * The interface allows <code>contentType</code> and <code>contentDisposition</code> to be empty. But it is
      * recommended to set them to make sure the is no ambiguity when the URL is used (a key without a file extension for
      * example)
-     * 
+     *
      * @param inBucket
      * @param inKey
      * @param durationInSeconds
@@ -162,20 +162,19 @@ public interface S3Handler {
      * Returns true if the key exists in the current bucket.
      * <p>
      * <b>IMPORTANT</b>: This method should <i>never</i> uses a CacheForKeyExists, and always requests the key on S3
-     * 
+     *
      * @param inBucket
      * @param inKey
      * @return true if the key exists in the "current bucket"
      * @since 8.2
      */
-    // This method should always check the key on S3, never looking in the cache (if any)
     public boolean existsKeyInS3(String inBucket, String inKey);
 
     /**
      * Returns true if the key exists in the bucket.
      * <p>
      * <b>IMPORTANT</b>: This method should <i>never</i> uses a CacheForKeyExists, and always requests the key on S3
-     * 
+     *
      * @param inKey
      * @return true if the key exists in the bucket
      * @since 8.2
@@ -184,8 +183,8 @@ public interface S3Handler {
 
     /**
      * Returns true if the key exists on S3 (using the "current bucket"), and should first check in the
-     * CacheForExistsKey (if the configuraiton allows usage of the cache)
-     * 
+     * CacheForExistsKey (if the configuration allows usage of the cache)
+     *
      * @param inKey
      * @return true is the key exists on S3. May use the cache
      * @since 8.2
@@ -194,8 +193,8 @@ public interface S3Handler {
 
     /**
      * Returns true if the key exists on S3, in the bucket, and should first check in the CacheForExistsKey (if the
-     * configuraiton allows usage of the cache)
-     * 
+     * Configuration allows usage of the cache)
+     *
      * @param bucket
      * @param inKey
      * @return
@@ -205,7 +204,7 @@ public interface S3Handler {
 
     /**
      * Return the current bucket
-     * 
+     *
      * @return the current bucket
      * @since 8.2
      */
@@ -213,7 +212,7 @@ public interface S3Handler {
 
     /**
      * returns the default duration used to build temp. signed URLs
-     * 
+     *
      * @return the default duration used to build temp. signed URLs
      * @since 8.2
      */
@@ -221,14 +220,14 @@ public interface S3Handler {
 
     /**
      * Just a convenient method, saving one line of code (getting the service)
-     * 
+     *
      * @param name
      * @return the S3Handler contributed with this name, null if not found
      * @since 8.2
      */
     public static S3Handler getS3Handler(String name) {
 
-        S3HandlerService s3HandlerService = (S3HandlerService) Framework.getService(S3HandlerService.class);
+        S3HandlerService s3HandlerService = Framework.getService(S3HandlerService.class);
 
         if (StringUtils.isBlank(name)) {
             name = Constants.DEFAULT_HANDLER_NAME;
@@ -240,7 +239,7 @@ public interface S3Handler {
 
     /**
      * Generic method used to build a message when an error is thrown by AWS
-     * 
+     *
      * @param e
      * @return a string describing the error
      * @since 8.2
@@ -275,7 +274,7 @@ public interface S3Handler {
 
     /**
      * Generic helper telling the caller if an error catched is a "MIsing Key on S3" error
-     * 
+     *
      * @param e
      * @return true if the error is "MIssing Key" error
      * @since 8.2

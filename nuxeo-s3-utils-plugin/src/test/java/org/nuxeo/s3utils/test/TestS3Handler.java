@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * Contributors:
- *     Thiabud Arguillere
+ *     Thibaud Arguillere
  */
 package org.nuxeo.s3utils.test;
 
@@ -40,7 +40,7 @@ import org.nuxeo.s3utils.S3Handler;
 
 /**
  * See {@link SimpleFeatureCustom} for explanation about the local configuration file used for testing.
- * 
+ *
  * @since 7.10
  */
 @RunWith(FeaturesRunner.class)
@@ -58,18 +58,18 @@ public class TestS3Handler {
 
     @Before
     public void setup() throws Exception {
-        
+
         if(SimpleFeatureCustom.hasLocalTestConfiguration()) {
             // Sanity check
             TEST_FILE_KEY = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY);
             assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY,
                     StringUtils.isNotBlank(TEST_FILE_KEY));
-            
+
             String sizeStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE);
             assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE,
                     StringUtils.isNotBlank(sizeStr));
             TEST_FILE_SIZE = Long.parseLong(sizeStr);
-            
+
             s3Handler = S3Handler.getS3Handler(Constants.DEFAULT_HANDLER_NAME);
         }
 
@@ -79,7 +79,7 @@ public class TestS3Handler {
     public void testDownloadFile() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-                
+
         Blob result = s3Handler.downloadFile(TEST_FILE_KEY, null);
         assertNotNull(result);
 
@@ -143,38 +143,38 @@ public class TestS3Handler {
         assertFalse(ok);
 
     }
-    
+
     @Test
     public void testCacheForKeyExists() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        
+
         boolean exists, isInCache;
-        
+
         CacheForKeyExists cache = new CacheForKeyExists(s3Handler);
-        
+
         // Get an object. Found or not, it should go in the cache
         exists = cache.existsKey(TEST_FILE_KEY);
         assertTrue(exists);
-        
+
         isInCache = cache.isInCache(TEST_FILE_KEY);
         assertTrue(isInCache);
-        
+
         isInCache = cache.isInCache(UUID.randomUUID().toString());
         assertFalse(isInCache);
-        
+
         // Add a non existing file
         String other = UUID.randomUUID().toString();
         exists = cache.existsKey(other);
         assertFalse(exists);
         isInCache = cache.isInCache(other);
         assertTrue(isInCache);
-        
+
         // Now, test the count. We should have 2, TEST_FILE_KEY and other
         assertEquals(2, cache.getCacheCount());
-        
+
         cache.cleanup();
-        
+
         // Now, test duration
         int durationInCacheMs = 1000;
         cache = new CacheForKeyExists(s3Handler);
@@ -182,13 +182,13 @@ public class TestS3Handler {
 
         exists = cache.existsKey(TEST_FILE_KEY);
         assertTrue(exists);
-        
+
         // Wait for at least the duration
         Thread.sleep(durationInCacheMs + 1000);
-        
+
         isInCache = cache.isInCache(TEST_FILE_KEY);
         assertFalse(isInCache);
-        
+
     }
 
 }

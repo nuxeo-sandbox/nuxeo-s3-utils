@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * Contributors:
- *     thibaud
+ *     Thibaud Arguillere
  */
 package org.nuxeo.s3utils;
 
@@ -25,7 +25,7 @@ import org.nuxeo.common.xmap.annotation.XObject;
 
 /**
  * Class handling the S3Handler contribution. Here is an example of XML contribution. Notice that we use an expression (
- * <code>${avalue:=}</code>) that allows to fill the value from the fonciguration (typically, nuxeo.conf) at startup.
+ * <code>${avalue:=}</code>) that allows to fill the value from the configuration (typically, nuxeo.conf) at startup.
  * Which is a recommended way to configure values.
  * <p>
  * <code><pre>
@@ -41,7 +41,7 @@ import org.nuxeo.common.xmap.annotation.XObject;
  *   </s3Handler>
  *  </extension>
  * </pre></code>
- * 
+ *
  * @since 8.2
  */
 @XObject("s3Handler")

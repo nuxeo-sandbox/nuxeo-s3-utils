@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * Contributors:
- *     thibaud
+ *     Thibaud Arguillere
  */
 package org.nuxeo.s3utils;
 
@@ -26,7 +26,7 @@ import org.nuxeo.runtime.model.ComponentInstance;
 import org.nuxeo.runtime.model.DefaultComponent;
 
 /**
- * IMplementaiton of service: Loads contributions, initializes handlers, ...
+ * Implementation of service: Loads contributions, initializes handlers, ...
  *
  * @since 8.2
  */

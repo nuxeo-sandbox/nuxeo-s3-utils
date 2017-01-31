@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * Contributors:
- *     Thiabud Arguillere
+ *     Thibaud Arguillere
  */
 package org.nuxeo.s3utils;
 
@@ -31,20 +31,20 @@ import org.jboss.seam.annotations.Scope;
  * <p>
  * Here is an example, where the objectKey is stored in a document, in the "myschema:S3key" field:
  * <p>
- * 
+ *
  * <pre>
  * {@code
  * <div xmlns:c="http://java.sun.com/jstl/core" xmlns:nxl="http://nuxeo.org/nxforms/layout" xmlns:h="http://java.sun.com/jsf/html" xmlns:nxh="http://nuxeo.org/nxweb/html">
  *     <c:if test="#{widget.mode != 'edit'}">
  *         <h:outputLink value="#{s3UtilsHelper.getS3TempSignedUrl(field)}" target="_blank">#{widget.label}</h:outputLink>
- *     </c:if>  
+ *     </c:if>
  *     <c:if test="#{widget.mode == 'edit'}">
  *         <h:inputText value="#{field}" />
- *     </c:if> 
+ *     </c:if>
  * </div>
  * }
  * </pre>
- * 
+ *
  * @since 7.10
  */
 @Name("s3UtilsHelper")
@@ -58,7 +58,7 @@ public class S3UtilsHelperBean implements Serializable {
     /**
      * Sets the S3Handler to use for the next calls. If empty, switches to the default handler (see
      * {@link Constants.DEFAULT_HANDLER_NAME})
-     * 
+     *
      * @param inName
      * @since 8.2
      */
@@ -81,7 +81,7 @@ public class S3UtilsHelperBean implements Serializable {
      * if the bucket is empty, the code uses the bucket set in the configuration.
      * <p>
      * All others <code>getS3TempSignedUrl</code> methods are just convenient accessors with less parameters.
-     * 
+     *
      * @param inKey
      * @return the temp signed URL
      * @throws IOException
@@ -109,7 +109,7 @@ public class S3UtilsHelperBean implements Serializable {
      * <p>
      * Uses the S3Handler set by a call to {@link setHandlerName} (or <code>Constants.DEFAULT_HANDLER_NAME</code>) and
      * an object key
-     * 
+     *
      * @param inKey
      * @return the temp signed URL
      * @throws IOException
@@ -126,7 +126,7 @@ public class S3UtilsHelperBean implements Serializable {
      * <p>
      * Uses the S3Handler set by a call to {@link setHandlerName} (or <code>Constants.DEFAULT_HANDLER_NAME</code>), a
      * bucket and an objectKey
-     * 
+     *
      * @param inKey
      * @return the temp signed URL
      * @throws IOException
@@ -142,7 +142,7 @@ public class S3UtilsHelperBean implements Serializable {
      * <code>getS3TempSignedUrl(String handlerName, String bucket, String objectKey, int durationInSeconds, String contentType, String contentDisposition)</code>
      * <p>
      * Uses the S3Handler set by a call to {@link setHandlerName} (or <code>Constants.DEFAULT_HANDLER_NAME</code>)
-     * 
+     *
      * @param inKey
      * @return the temp signed URL
      * @throws IOException
@@ -159,7 +159,7 @@ public class S3UtilsHelperBean implements Serializable {
      * Returns true if the given key exists in S3 in the default (set in the configuration) bucket
      * <p>
      * Uses the S3Handler set by a call to {@link setHandlerName} (or <code>Constants.DEFAULT_HANDLER_NAME</code>)
-     * 
+     *
      * @param objectKey
      * @return true if the key exist on S3 (in the default bucket)
      * @since 7.10
@@ -175,7 +175,7 @@ public class S3UtilsHelperBean implements Serializable {
      * the configuration)
      * <p>
      * Uses the S3Handler set by a call to {@link setHandlerName} (or <code>Constants.DEFAULT_HANDLER_NAME</code>)
-     * 
+     *
      * @param bucket
      * @param objectKey
      * @return true if the key exist on S3 in the given bucket
