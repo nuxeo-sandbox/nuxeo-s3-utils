@@ -12,13 +12,9 @@
   <description/>
   <dependencies>
     <!-- AWS -->
-    <!-- Hard coding the same version as the one used by build nuxeo -->
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-core</artifactId>
-      <!--
-      <version>1.10.22</version>
-      -->
       <exclusions>
         <exclusion>
           <groupId>joda-time</groupId>
@@ -29,9 +25,6 @@
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-s3</artifactId>
-      <!--
-      <version>1.10.22</version>
-      -->
     </dependency>
     <dependency>
       <groupId>org.nuxeo.common</groupId>
@@ -42,28 +35,8 @@
       <artifactId>nuxeo-runtime</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.nuxeo.ecm.core</groupId>
-      <artifactId>nuxeo-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.nuxeo.ecm.core</groupId>
-      <artifactId>nuxeo-core-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.nuxeo.ecm.core</groupId>
-      <artifactId>nuxeo-core-query</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.nuxeo.ecm.core</groupId>
-      <artifactId>nuxeo-core-schema</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.osgi</groupId>
       <artifactId>org.osgi.core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>commons-lang</groupId>
-      <artifactId>commons-lang</artifactId>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -83,10 +56,6 @@
     <dependency>
       <groupId>org.jboss.seam</groupId>
       <artifactId>jboss-seam</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.nuxeo.ecm.platform</groupId>
-      <artifactId>nuxeo-platform-ui-web</artifactId>
     </dependency>
     <dependency>
       <groupId>org.nuxeo.ecm.automation</groupId>

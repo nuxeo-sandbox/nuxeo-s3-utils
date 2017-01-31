@@ -17,17 +17,17 @@
   <!-- <production-state>production_ready</production-state> -->
   <supported>false</supported>
   <platforms>
-    <platform>cap-@DISTRIB_VERSION@</platform>
-    <platform>cap-@DISTRIB_VERSION@-HF*</platform>
-    <platform>cap-7.10</platform>
-    <platform>cap-7.10-SNAPSHOT</platform>
-    <platform>cap-8.2</platform>
+    <platform>server-@DISTRIB_VERSION@</platform>
+    <platform>server-@DISTRIB_VERSION@-HF*</platform>
     <platform>cap-8.3</platform>
   </platforms>
   <!-- Dependencies on other packages -->
   <!-- <dependencies> -->
   <!-- <package>another-package:1.0.0:1.0.0</package> -->
   <!-- </dependencies> -->
+  <dependencies>
+    <package>nuxeo-jsf-ui</package>
+  </dependencies>
   <!-- Conflicts with other packages -->
   <!-- <conflicts> -->
   <!-- <package>a-conflicting-package:1.0.0:1.0.0</package> -->

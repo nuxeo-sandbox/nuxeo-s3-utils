@@ -12,23 +12,32 @@
 	<description/>
 	<dependencies>
 		<!-- Base distribution(s) for the MP -->
-	    <dependency>
-	      <groupId>org.nuxeo.ecm.distribution</groupId>
-	      <artifactId>nuxeo-nxr-server</artifactId>
-	      <type>pom</type>
-	    </dependency>
-	    <dependency>
-	      <groupId>org.nuxeo.ecm.distribution</groupId>
-	      <artifactId>nuxeo-nxr-server</artifactId>
-	      <type>zip</type>
-	      <scope>provided</scope>
-	    </dependency>
+        <dependency>
+            <groupId>org.nuxeo.ecm.distribution</groupId>
+            <artifactId>nuxeo-nxr-server</artifactId>
+            <type>zip</type>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.nuxeo.ecm.distribution</groupId>
+            <artifactId>nuxeo-nxr-jsf-ui</artifactId>
+            <type>zip</type>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.nuxeo.marketplace.dam</groupId>
+            <artifactId>marketplace</artifactId>
+            <classifier>nxr-server</classifier>
+            <type>zip</type>
+            <scope>provided</scope>
+        </dependency>
 
 		<!-- Additional bundles to be deployed by the MP -->
 		<dependency>
 			<groupId>nuxeo-s3-utils</groupId>
 			<artifactId>nuxeo-s3-utils-plugin</artifactId>
-			<version>${nuxeo.project.version}</version>
+			<!--
+			<version>${nuxeo.project.version}</version> -->
 		</dependency>
 	</dependencies>
 	<build>

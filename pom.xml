@@ -3,8 +3,8 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>org.nuxeo</groupId>
-    <artifactId>nuxeo-addons-parent</artifactId>
+    <groupId>org.nuxeo.ecm.distribution</groupId>
+    <artifactId>nuxeo-distribution</artifactId>
     <version>8.10</version>
   </parent>
   <groupId>nuxeo-s3-utils</groupId>
@@ -14,10 +14,11 @@
   <packaging>pom</packaging>
   <description />
   <properties>
+    <nuxeo.s3-utils.version>8.10-SNAPSHOT</nuxeo.s3-utils.version>
     <nuxeo.project.version>${project.version}</nuxeo.project.version>
     <nuxeo.version>8.10</nuxeo.version>
     <nuxeo.distribution.version>8.10</nuxeo.distribution.version>
-    <nuxeo.s3-utils.version>8.10-SNAPSHOT</nuxeo.s3-utils.version>
+    <nuxeo.dam.nxr.version>6.2.3</nuxeo.dam.nxr.version>
   </properties>
   <modules>
     <module>nuxeo-s3-utils-plugin</module>
@@ -25,13 +26,15 @@
   </modules>
   <dependencyManagement>
     <dependencies>
+      <!-- Nuxeo dependencies -->
       <dependency>
-        <groupId>org.nuxeo.ecm.distribution</groupId>
-        <artifactId>nuxeo-distribution</artifactId>
-        <scope>import</scope>
-        <type>pom</type>
-        <version>${nuxeo.version}</version>
-            </dependency>
+        <groupId>org.nuxeo.marketplace.dam</groupId>
+        <artifactId>marketplace</artifactId>
+        <classifier>nxr-server</classifier>
+        <version>${nuxeo.dam.nxr.version}</version>
+        <type>zip</type>
+      </dependency>
+      <!-- S3 Utils -->
       <dependency>
         <groupId>nuxeo-s3-utils</groupId>
         <artifactId>nuxeo-s3-utils-plugin</artifactId>

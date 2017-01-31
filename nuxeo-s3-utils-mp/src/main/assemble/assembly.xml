@@ -11,10 +11,10 @@
     <property name="outdir" value="${maven.project.build.directory}" />
     <!-- Include your artifacts in the graph adding your groupId to groupPrefixes -->
     <artifact:nuxeo-expand includeTestScope="true"
-                           groupPrefixes="org.nuxeo,com.nuxeo" />
+                           groupPrefixes="nuxeo-s3-utils" />
     <!-- For Nuxeo IDE being able to use that distribution as a SDK -->
-    <artifact:print output="${outdir}/artifacts-sample.properties" mode="sdk" />
-    <artifact:print output="${outdir}/test-artifacts-sample.properties"
+    <artifact:print output="${outdir}/artifacts-s3utils.properties" mode="sdk" />
+    <artifact:print output="${outdir}/test-artifacts-s3utils.properties"
                     mode="sdk"
                     scopes="test" />
     <!-- Prints the graph for debugging purpose -->
@@ -32,27 +32,37 @@
         <filter token="DISTRIB_VERSION" value="${nuxeo.distribution.version}" />
       </filterset>
     </copy>
-    <copy file="${outdir}/artifacts-sample.properties"
+    <copy file="${outdir}/artifacts-s3utils.properties"
           todir="${outdir}/marketplace/install" />
-    <copy file="${outdir}/test-artifacts-sample.properties"
+    <copy file="${outdir}/test-artifacts-s3utils.properties"
           todir="${outdir}/marketplace/install" />
 
     <!-- Base distribution NXR -->
     <copy todir="${outdir}">
       <artifact:resolveFile key="org.nuxeo.ecm.distribution:nuxeo-nxr-server::zip" />
+      <!-- DAM NXR -->
+      <artifact:file key="org.nuxeo.marketplace.dam:marketplace::zip:nxr-server" />
+    </copy>
+    <!-- JSF UI NXR -->
+    <copy todir="${outdir}">
+      <artifact:file key="org.nuxeo.ecm.distribution:nuxeo-nxr-jsf-ui::zip" />
     </copy>
 
       <!-- Nuxeo bundles -->
     <copy todir="${outdir}/nxr/bundles" overwrite="true">
       <artifact:set>
           <includes>
-              <artifact groupId="org.nuxeo*" scope="!test" type="!pom" />
-              <artifact groupId="nuxeo-studio" scope="!test" type="!pom" />
-
-              <artifact groupId="nuxeo-s3-utils" scope="!test" type="!pom" />
+              <artifact groupId="org.nuxeo*" />
+              <artifact groupId="nuxeo-studio" />
+              <artifact groupId="nuxeo-s3-utils*" />
           </includes>
           <excludes>
-              <artifact groupId="org.nuxeo.lib*" />
+            <!--
+              <artifact groupId="${maven.project.groupId}" artifactId="${maven.project.artifactId}" version="${maven.project.version}" type="${maven.project.packaging}"/> -->
+              <artifact groupId="org.nuxeo.lib*"/>
+              <artifact scope="test"/>
+              <artifact scope="provided"/>
+              <artifact type="pom"/>
           </excludes>
       </artifact:set>
     </copy>
@@ -60,18 +70,30 @@
     <copy todir="${outdir}/nxr/lib" overwrite="true">
       <artifact:set>
           <includes>
-              <artifact groupId="!org.nuxeo*" scope="!test" />
-              <artifact groupId="org.nuxeo.lib*" scope="!test" />
+              <artifact groupId="!org.nuxeo*" />
+              <artifact groupId="org.nuxeo.lib*" />
           </includes>
           <excludes>
-              <artifact groupId="org.nuxeo*" />
+              <artifact scope="test" />
+              <artifact scope="provided" />
+              <artifact type="pom" />
               <artifact groupId="nuxeo-studio" />
-              <artifact groupId="nuxeo-s3-utils" />
-              <artifact artifactId="mongo-java-driver*"/>
+              <!-- Filter out your artifacts using their groupId for instance -->
+              <artifact groupId="nuxeo-s3-utils*" />
           </excludes>
       </artifact:set>
     </copy>
     <nx:rmdups dir="${outdir}/nxr/lib" />
+
+    <unzip src="${outdir}/nuxeo-nxr-server-${nuxeo.distribution.version}.zip"
+           dest="${outdir}/nuxeo-nxr-all" />
+    <unzip src="${outdir}/nuxeo-nxr-jsf-ui-${nuxeo.distribution.version}.zip"
+           dest="${outdir}/nuxeo-nxr-all" />
+    <unzip src="${outdir}/marketplace-${nuxeo.dam.nxr.version}-nxr-server.zip"
+           dest="${outdir}/nuxeo-nxr-all" />
+    <zip destfile="${outdir}/nuxeo-nxr-all-${nuxeo.distribution.version}.zip"
+         basedir="${outdir}/nuxeo-nxr-all" />
+         
     <!-- Temporary ZIP Nuxeo NXR to compare with base distribution NXR -->
     <zip destfile="${outdir}/nxr-${maven.project.version}.zip"
          basedir="${outdir}/nxr" />
@@ -85,9 +107,9 @@
                 file2="${outdir}/nuxeo-nxr-server-${nuxeo.distribution.version}.zip"
                 includesfile="${outdir}/includes"
                 excludesfile="${outdir}/excludesfile"
-                patternsetid="sample.versus.cap"
+                patternsetid="sample.versus.cap"> <!--
                 ignoreContent="false"
-                ignoreContentPattern=".*\.jar$">
+                ignoreContentPattern=".*\.jar$"> -->
     </nx:zipdiff>
     <unzip src="${outdir}/nxr-${maven.project.version}.zip"
            dest="${outdir}/marketplace/install">
@@ -119,9 +141,9 @@
 
     <var name="install.properties"
          value="${line.separator}
-  &lt;copy file=&quot;${package.root}/install/artifacts-sample.properties&quot;${line.separator}
+  &lt;copy file=&quot;${package.root}/install/artifacts-s3utils.properties&quot;${line.separator}
     todir=&quot;${env.server.home}/sdk&quot; overwrite=&quot;true&quot; /&gt;${line.separator}
-  &lt;copy file=&quot;${package.root}/install/test-artifacts-sample.properties&quot;${line.separator}
+  &lt;copy file=&quot;${package.root}/install/test-artifacts-s3utils.properties&quot;${line.separator}
     todir=&quot;${env.server.home}/sdk&quot; overwrite=&quot;true&quot; /&gt;" />
 
     <var name="install.templates" value="" />
