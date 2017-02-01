@@ -1,11 +1,25 @@
 <component name="org.nuxeo.s3-utils.operations">
 
-  <extension target="org.nuxeo.ecm.core.operation.OperationServiceComponent"
-		point="operations">
-		<operation class="org.nuxeo.s3utils.operations.S3DownloadOp" />
-		<operation class="org.nuxeo.s3utils.operations.S3UploadOp" />
-        <operation class="org.nuxeo.s3utils.operations.S3DeleteOp" />
-	</extension>
+  <extension target="org.nuxeo.ecm.core.operation.OperationServiceComponent" point="operations">
+    <operation class="org.nuxeo.s3utils.operations.S3DownloadOp" />
+    <operation class="org.nuxeo.s3utils.operations.S3UploadOp" />
+    <operation class="org.nuxeo.s3utils.operations.S3DeleteOp" />
+  </extension>
+
+  <!-- By default, limit some operations to administrators -->
+  <!-- See https://doc.nuxeo.com/nxdoc/filtering-exposed-operations -->
+  <!-- This can be overridden in a simple Studio XML Extension -->
+  <extension target="org.nuxeo.ecm.automation.server.AutomationServer" point="bindings">
+    <binding name="S3Utils.Delete">
+      <administrator>true</administrator>
+    </binding>
+    <binding name="S3Utils.Download">
+      <administrator>true</administrator>
+    </binding>
+    <binding name="S3Utils.Upload">
+      <administrator>true</administrator>
+    </binding>
+  </extension>
 
 </component>
 
