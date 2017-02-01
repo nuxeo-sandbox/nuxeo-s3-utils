@@ -98,7 +98,9 @@ Now, we can use the "S3-Bucket-one" or the "S3-Bucket-Two" handlers.
 
 ## Features
 ### Operations
-The plugin contributes the following operations to be used in an Automation Chain:
+The plugin contributes the following operations to be used in an Automation Chain.
+
+**WARNING**: For security reason, the operations that read/write S3 are, by default, restricted to administrators when called from REST. See below the details and how to tune the behavior.
 
 * **Files > S3 Utils: Upload** (ID: `S3Utils.Upload`)
   * Upload a file to S3
@@ -133,6 +135,27 @@ The principles are:
 * Add it to the "Operations Registry" in Studio
 
 You can find an example here: https://doc.nuxeo.com/nxdoc/how-to-use-pdf-conversion-operations-with-studio/.
+
+#### How to Tune the REST Filtering
+The opérations that are filtered for REST calls and restricted to administrators are listed in the `s3-utils-operations.xml` file. We are using the recommended mechanism for the filtering, as described [here](https://doc.nuxeo.com/nxdoc/filtering-exposed-operations/), and the `s3-utils-operations.xml` contains the following:
+
+```
+<component name="org.nuxeo.s3-utils.operations">
+  . . .
+  <extension target="org.nuxeo.ecm.automation.server.AutomationServer" point="bindings">
+    <binding name="S3Utils.Delete">
+      <administrator>true</administrator>
+    </binding>
+    . . . etc . . .
+  </extension>
+</component>
+```
+
+This contribution makes sure these single operations, when called via REST, can only be called by a administrator. If you need to make them available via REST for other users/groups, you can:
+
+* Override them in a Studio XML extension
+* Use them in an Automation Chain that you call from REST
+
 
 ### Temporary Signed URL
 
