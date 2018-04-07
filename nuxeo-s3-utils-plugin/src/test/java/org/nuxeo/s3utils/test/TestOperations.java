@@ -21,6 +21,8 @@ package org.nuxeo.s3utils.test;
 import static org.junit.Assert.*;
 
 import java.io.File;
+import java.util.UUID;
+
 import org.apache.commons.lang.StringUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -43,6 +45,8 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.s3utils.Constants;
 import org.nuxeo.s3utils.S3Handler;
 import org.nuxeo.s3utils.operations.S3DownloadOp;
+import org.nuxeo.s3utils.operations.S3KeyExistsOp;
+import org.nuxeo.s3utils.operations.S3TempSignedUrlOp;
 import org.nuxeo.s3utils.operations.S3UploadOp;
 
 import com.google.inject.Inject;
@@ -195,5 +199,89 @@ public class TestOperations {
 		assertEquals(TEST_FILE_SIZE, size);
 
 	}
+
+	@Test
+	public void testKeyExists() throws Exception {
+
+        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+
+        OperationChain chain;
+        OperationContext ctx = new OperationContext(coreSession);
+        chain = new OperationChain("testExistsKey-1");
+        chain.add(S3KeyExistsOp.ID).set("key", TEST_FILE_KEY);
+        automationService.run(ctx, chain);
+
+        assertTrue((boolean) ctx.get(S3KeyExistsOp.RESULT_CONTEXT_VAR_NAME));
+
+	}
+
+    @Test
+    public void testKeyDoesNotExist() throws Exception {
+
+        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+
+        String invalid = UUID.randomUUID().toString().replace("-", "") + ".pdf";
+
+        OperationChain chain;
+        OperationContext ctx = new OperationContext(coreSession);
+        chain = new OperationChain("testExistsKey-1");
+        chain.add(S3KeyExistsOp.ID).set("key", invalid);
+        automationService.run(ctx, chain);
+
+        assertFalse((boolean) ctx.get(S3KeyExistsOp.RESULT_CONTEXT_VAR_NAME));
+
+    }
+
+    @Test
+    public void testTempSignedUrl() throws Exception {
+
+        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+
+        OperationChain chain;
+        OperationContext ctx = new OperationContext(coreSession);
+        chain = new OperationChain("testExistsKey-1");
+        chain.add(S3TempSignedUrlOp.ID).set("key", TEST_FILE_KEY);
+        automationService.run(ctx, chain);
+
+        String urlStr = (String) ctx.get(S3TempSignedUrlOp.RESULT_CONTEXT_VAR_NAME);
+        assertTrue(StringUtils.isNotBlank(urlStr));
+
+        // We must be able to download the file without authentication
+        File f = TestUtils.downloadFile(urlStr);
+        assertNotNull(f);
+        String name = f.getName();
+        long size = f.length();
+        // Cleanup now
+        f.delete();
+
+        assertEquals(TEST_FILE_KEY, name);
+        assertEquals(TEST_FILE_SIZE, size);
+
+    }
+
+    @Test
+    public void testTempSignedUrShouldFaill() throws Exception {
+
+        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+
+        int duration = 2; // 2 seconds
+
+        OperationChain chain;
+        OperationContext ctx = new OperationContext(coreSession);
+        chain = new OperationChain("testExistsKey-1");
+        chain.add(S3TempSignedUrlOp.ID).set("key", TEST_FILE_KEY).set("durationInSeconds", 2);
+        automationService.run(ctx, chain);
+
+        String urlStr = (String) ctx.get(S3TempSignedUrlOp.RESULT_CONTEXT_VAR_NAME);
+        assertTrue(StringUtils.isNotBlank(urlStr));
+
+        // Wait for at least the duration
+        Thread.sleep((duration + 1) * 1000);
+
+        // Downloading should fail, so the returned File is null
+        File f = TestUtils.downloadFile(urlStr);
+        assertNull(f);
+
+    }
 
 }

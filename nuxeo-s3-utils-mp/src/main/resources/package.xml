@@ -1,6 +1,6 @@
 <!-- See documentation at http://doc.nuxeo.com/x/HgIz -->
 <package type="addon" name="nuxeo-s3-utils" version="@VERSION@">
-  <title>Nuxeo KM MP</title>
+  <title>Nuxeo S3-Utils MP</title>
   <description></description>
   <home-page>http://doc.nuxeo.com/</home-page>
   <vendor>Nuxeo</vendor>
@@ -19,7 +19,6 @@
   <platforms>
     <platform>server-@DISTRIB_VERSION@</platform>
     <platform>server-@DISTRIB_VERSION@-HF*</platform>
-    <platform>cap-8.3</platform>
   </platforms>
   <!-- Dependencies on other packages -->
   <!-- <dependencies> -->

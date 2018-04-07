@@ -5,20 +5,20 @@
   <parent>
     <groupId>org.nuxeo.ecm.distribution</groupId>
     <artifactId>nuxeo-distribution</artifactId>
-    <version>8.10</version>
+    <version>9.10</version>
   </parent>
   <groupId>nuxeo-s3-utils</groupId>
   <artifactId>nuxeo-s3-utils-parent</artifactId>
   <name>Parent Project for Nuxeo S3 Utils</name>
-  <version>8.10-SNAPSHOT</version>
+  <version>9.10-SNAPSHOT</version>
   <packaging>pom</packaging>
   <description />
   <properties>
-    <nuxeo.s3-utils.version>8.10-SNAPSHOT</nuxeo.s3-utils.version>
+    <nuxeo.s3-utils.version>9.10-SNAPSHOT</nuxeo.s3-utils.version>
     <nuxeo.project.version>${project.version}</nuxeo.project.version>
-    <nuxeo.version>8.10</nuxeo.version>
-    <nuxeo.distribution.version>8.10</nuxeo.distribution.version>
-    <nuxeo.dam.nxr.version>6.2.3</nuxeo.dam.nxr.version>
+    <nuxeo.version>9.10</nuxeo.version>
+    <nuxeo.distribution.version>9.10</nuxeo.distribution.version>
+    <nuxeo.dam.nxr.version>6.3.3</nuxeo.dam.nxr.version>
   </properties>
   <modules>
     <module>nuxeo-s3-utils-plugin</module>

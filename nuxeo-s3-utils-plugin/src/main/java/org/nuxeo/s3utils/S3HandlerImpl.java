@@ -58,7 +58,7 @@ public class S3HandlerImpl implements S3Handler {
 
     protected AmazonS3 s3;
 
-    protected CacheForKeyExists signedUrlCache = null;
+    protected CacheForKeyExists keyExistsCache = null;
 
     /**
      * Caller must call {@link initialize} right after creating creating a new instance
@@ -82,16 +82,16 @@ public class S3HandlerImpl implements S3Handler {
         s3 = new AmazonS3Client(awsCredentialsProvider);
 
         if (useCacheForExistsKey) {
-            signedUrlCache = new CacheForKeyExists(this);
+            keyExistsCache = new CacheForKeyExists(this);
         }
     }
 
     @Override
     public void cleanup() {
 
-        if (signedUrlCache != null) {
-            signedUrlCache.cleanup();
-            signedUrlCache = null;
+        if (keyExistsCache != null) {
+            keyExistsCache.cleanup();
+            keyExistsCache = null;
         }
     }
 
@@ -264,8 +264,8 @@ public class S3HandlerImpl implements S3Handler {
             inBucket = currentBucket;
         }
 
-        if (signedUrlCache != null) {
-            return signedUrlCache.existsKey(inBucket, inKey);
+        if (keyExistsCache != null) {
+            return keyExistsCache.existsKey(inBucket, inKey);
         } else {
             return existsKeyInS3(inBucket, inKey);
         }
@@ -274,8 +274,8 @@ public class S3HandlerImpl implements S3Handler {
     @Override
     public void setBucket(String inBucket) {
         currentBucket = inBucket;
-        if (signedUrlCache != null) {
-            signedUrlCache.setBucket(inBucket);
+        if (keyExistsCache != null) {
+            keyExistsCache.setBucket(inBucket);
         }
     }
 

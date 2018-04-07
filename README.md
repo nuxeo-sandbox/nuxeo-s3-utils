@@ -128,6 +128,28 @@ The plugin contributes the following operations to be used in an Automation Chai
     * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
     * `key`: The key of the file on S3
 
+* **Files > S3 Utils: Key Exists** (ID: `S3Utils.KeyExists`)
+  * Input is `void`, returns `void`
+  * Sets a new context variable with the result: `s3UtilsKeyExists`. It is a `boolean` variable, set to `true` or `false` depending on the result of the test.
+  * Parameters:
+    * `key`: The key of the file on S3 (required)
+    * `handlerName`: The name of the S3Handler to use (see examples above). optional.
+    * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
+    * `useCache`: Optional, default is `false`. If the S3Handler has been configured to cache the results of KeyExists, it will first search in the cache. If you need to make 100% a key exists or not at the time of the call, ignore this parameter
+
+* **Files > S3 Utils: Temp Signed URL** (ID: `S3Utils.S3TempSignedUrlOp`)
+  * Input is `void`, returns `void`
+  * Sets a new context variable with the result: `s3UtilsTempSignedUrl`. It is a `String` variable, containing the temporary signed URL.
+  * Parameters:
+    * `key`: The key of the file on S3 (required)
+    * `handlerName`: The name of the S3Handler to use (see examples above). optional.
+    * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
+    * `durationInSeconds`: Optional, default is set to the value found in the S3Handler configuration.
+    * `contentType`: Optional, String.
+    * `contentDisposition`: Optional, String.<br/>
+      `contentType` and `contentDisposition` are optional but it is recommended to set them to make sure the is no ambiguity when the URL is used (a key without a file extension for example)
+
+
 #### How to Import these Operations in your Project?
 The principles are:
 

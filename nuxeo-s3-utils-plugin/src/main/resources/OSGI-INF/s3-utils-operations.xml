@@ -4,6 +4,8 @@
     <operation class="org.nuxeo.s3utils.operations.S3DownloadOp" />
     <operation class="org.nuxeo.s3utils.operations.S3UploadOp" />
     <operation class="org.nuxeo.s3utils.operations.S3DeleteOp" />
+    <operation class="org.nuxeo.s3utils.operations.S3KeyExistsOp" />
+    <operation class="org.nuxeo.s3utils.operations.S3TempSignedUrlOp" />
   </extension>
 
   <!-- By default, limit some operations to administrators -->
