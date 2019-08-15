@@ -2,7 +2,7 @@
 <package type="addon" name="nuxeo-s3-utils" version="@VERSION@">
   <title>Nuxeo S3-Utils MP</title>
   <description></description>
-  <home-page>http://doc.nuxeo.com/</home-page>
+  <home-page>https://github.com/nuxeo-sandbox/nuxeo-s3-utils</home-page>
   <vendor>Nuxeo</vendor>
   <installer restart="true" />
   <uninstaller restart="true" />

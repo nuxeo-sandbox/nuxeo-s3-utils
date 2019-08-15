@@ -21,7 +21,7 @@ package org.nuxeo.s3utils.test;
 import static org.junit.Assert.*;
 
 import java.io.File;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;

@@ -21,7 +21,7 @@ package org.nuxeo.s3utils;
 import java.io.IOException;
 import java.io.Serializable;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.jboss.seam.ScopeType;
 import org.jboss.seam.annotations.Name;
 import org.jboss.seam.annotations.Scope;

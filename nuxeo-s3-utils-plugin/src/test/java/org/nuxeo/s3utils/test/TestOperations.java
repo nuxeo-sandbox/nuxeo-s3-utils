@@ -23,7 +23,7 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.util.UUID;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;

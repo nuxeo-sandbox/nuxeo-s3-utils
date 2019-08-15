@@ -23,7 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * This class caches S3 keys and their existence on S3 for a given S3Handler. This is to avoid checking a key too often
