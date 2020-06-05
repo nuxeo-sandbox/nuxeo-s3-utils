@@ -1,7 +1,7 @@
 <!-- See documentation at http://doc.nuxeo.com/x/HgIz -->
 <package type="addon" name="nuxeo-s3-utils" version="@VERSION@">
   <title>Nuxeo S3-Utils MP</title>
-  <description></description>
+  <description>This addon contains utilities for AWS S3, including operations to upload or download a file, utilities to build a temporary signed URL for S3, and a helper SEAM Bean.</description>
   <home-page>https://github.com/nuxeo-sandbox/nuxeo-s3-utils</home-page>
   <vendor>Nuxeo</vendor>
   <installer restart="true" />
