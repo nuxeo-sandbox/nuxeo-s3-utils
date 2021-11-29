@@ -4,7 +4,6 @@ Bundle-Name: nuxeo-s3-utils
 Bundle-Version: 1.0.qualifier
 Bundle-ClassPath: .
 Bundle-ActivationPolicy: lazy
-Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Bundle-ManifestVersion: 2
 Bundle-Vendor: Nuxeo
 Nuxeo-Component: OSGI-INF/s3-utils-operations.xml,OSGI-INF/s3-utils-se

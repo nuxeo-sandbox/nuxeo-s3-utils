@@ -4,30 +4,17 @@
 	<parent>
 		<groupId>nuxeo-s3-utils</groupId>
 		<artifactId>nuxeo-s3-utils-parent</artifactId>
-		<version>10.10-SNAPSHOT</version>
+		<version>2021.10-SNAPSHOT</version>
 	</parent>
 	<artifactId>nuxeo-s3-utils-mp</artifactId>
 	<packaging>zip</packaging>
-	<name>Market Place Package for Nuxeo s3-utils</name>
+	<name>MarketPlace Package for Nuxeo s3-utils</name>
 	<description/>
 	<dependencies>
 		<!-- Base distribution(s) for the MP -->
         <dependency>
             <groupId>org.nuxeo.ecm.distribution</groupId>
             <artifactId>nuxeo-nxr-server</artifactId>
-            <type>zip</type>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.nuxeo.ecm.distribution</groupId>
-            <artifactId>nuxeo-nxr-jsf-ui</artifactId>
-            <type>zip</type>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.nuxeo.marketplace.dam</groupId>
-            <artifactId>marketplace</artifactId>
-            <classifier>nxr-server</classifier>
             <type>zip</type>
             <scope>provided</scope>
         </dependency>

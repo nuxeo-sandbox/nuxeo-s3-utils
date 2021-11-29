@@ -1,32 +1,28 @@
 <!-- See documentation at http://doc.nuxeo.com/x/HgIz -->
 <package type="addon" name="nuxeo-s3-utils" version="@VERSION@">
   <title>Nuxeo S3-Utils MP</title>
-  <description>This addon contains utilities for AWS S3, including operations to upload or download a file, utilities to build a temporary signed URL for S3, and a helper SEAM Bean.</description>
+  <description>This addon contains utilities for AWS S3, including operations to upload or download a file and utilities to build a temporary signed URL for S3</description>
   <home-page>https://github.com/nuxeo-sandbox/nuxeo-s3-utils</home-page>
   <vendor>Nuxeo</vendor>
   <installer restart="true" />
   <uninstaller restart="true" />
-  <!-- <hotreload-support>false</hotreload-support> -->
-  <!-- <require-terms-and-conditions-acceptance>false</require-terms-and-conditions-acceptance> -->
+  <!-- Nuxeo Validation: none | inprocess | primary_validation | nuxeo_certified -->
   <nuxeo-validation>none</nuxeo-validation>
-  <!-- <nuxeo-validation>inprocess</nuxeo-validation> -->
-  <!-- <nuxeo-validation>primary_validation</nuxeo-validation> -->
-  <!-- <nuxeo-validation>nuxeo_certified</nuxeo-validation> -->
-  <!-- <production-state>proto</production-state> -->
+  <!-- Production State: production_ready | testing | proto -->
   <production-state>testing</production-state>
-  <!-- <production-state>production_ready</production-state> -->
   <supported>false</supported>
   <platforms>
-    <platform>server-@DISTRIB_VERSION@</platform>
-    <platform>server-@DISTRIB_VERSION@-HF*</platform>
+    <platform>lts-@NUXEO_TARGET_VERSION@</platform>
+    <platform>lts-@NUXEO_TARGET_VERSION@-HF*</platform>
   </platforms>
   <!-- Dependencies on other packages -->
   <!-- <dependencies> -->
   <!-- <package>another-package:1.0.0:1.0.0</package> -->
+  <!-- If you require JSF UI package:  -->
+  <!-- <package>nuxeo-jsf-ui</package> -->
+  <!-- If you require WEB UI package:  -->
+  <!-- <package>nuxeo-web-ui</package> -->
   <!-- </dependencies> -->
-  <dependencies>
-    <package>nuxeo-jsf-ui</package>
-  </dependencies>
   <!-- Conflicts with other packages -->
   <!-- <conflicts> -->
   <!-- <package>a-conflicting-package:1.0.0:1.0.0</package> -->
@@ -35,7 +31,7 @@
   <!-- <provides> -->
   <!-- <package>an-embedded-package:1.0.0:1.0.0</package> -->
   <!-- </provides> -->
-  <license>LGPL 2.1</license>
-  <license-url>http://www.gnu.org/licenses/lgpl-2.1.html</license-url>
+  <license>Apache License, Version 2.0</license>
+  <license-url>http://www.apache.org/licenses/LICENSE-2.0</license-url>
   <visibility>PUBLIC</visibility>
 </package>

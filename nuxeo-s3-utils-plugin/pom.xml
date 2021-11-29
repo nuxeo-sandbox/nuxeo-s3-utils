@@ -5,7 +5,7 @@
   <parent>
     <groupId>nuxeo-s3-utils</groupId>
     <artifactId>nuxeo-s3-utils-parent</artifactId>
-    <version>10.10-SNAPSHOT</version>
+    <version>2021.10-SNAPSHOT</version>
   </parent>
   <artifactId>nuxeo-s3-utils-plugin</artifactId>
   <name>nuxeo-s3-utils-plugin</name>
@@ -15,12 +15,14 @@
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-core</artifactId>
+     <!--
       <exclusions>
         <exclusion>
           <groupId>joda-time</groupId>
           <artifactId>joda-time</artifactId>
         </exclusion>
       </exclusions>
+    -->
     </dependency>
     <dependency>
       <groupId>com.amazonaws</groupId>
@@ -54,10 +56,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.jboss.seam</groupId>
-      <artifactId>jboss-seam</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.nuxeo.ecm.automation</groupId>
       <artifactId>nuxeo-automation-core</artifactId>
     </dependency>
@@ -67,6 +65,7 @@
 		<scope>test</scope>
 	</dependency>
   </dependencies>
+  <!--
   <build>
     <plugins>
       <plugin>
@@ -86,4 +85,5 @@
       </plugin>
     </plugins>
   </build>
+-->
 </project>

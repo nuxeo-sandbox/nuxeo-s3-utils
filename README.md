@@ -189,87 +189,6 @@ Content-Type and Content-Disposition should be used, especially if the distant o
 The class also has a utility to test the existence of a key on S3.
 
 
-#### The `s3utilsHelper` Bean
-
-This bean exposes the following functions to be typically used in an XHTML file:
-
-* `#{s3UtilsHelper.getS3TempSignedUrl("objectKey")}`
-
-  Returns the temp. signed url for the given object key, using the bucket and duration set in the configuration file, and no content type, no content disposition.
-
-* `#{s3UtilsHelper.getS3TempSignedUrl("bucket", "objectKey")}`
-
-  Returns the temp. signed url for the given object key in the given bucket, using the duration set in the configuraiton file, and no content type, no content disposition.
-
-* `#{s3UtilsHelper.getS3TempSignedUrl("bucket", "objectKey", duration, "content type", "content disposition")}`
-
-  This is the call with all the parameters. Default values will apply: if `busket` is empty the code uses the busket defined in the configuration, if `duration` is less than 1 the code uses the duration of the configuration file or a hard coded duration, and `contentType`and `contentDisposition` can be empty (no default value uses)
-  
-* `#{s3UtilsHelper.existsKey("objectKey")` and `#{s3UtilsHelper.existsKey("bucket", "objectKey")`
-  
-  Utility returning `true` if the given object exists in S3. To avoid multiple REST calls to AWS for the same object, the plug-in caches the value for 10 minutes (bucket + object key => exists or not).
-  
-
-
-A typical use would be a Widget template. This widget would allow the user to download a file from S3, using a temporary signed url to an object whose ID is stored in a field of the current document.
-
-So, for example, say you want to display an hyperlink to the file, and the object key is stored in the `s3info:s3_object_key` custom field. You then create the "s3TempSignedHyperLink.xhtml" file with this content:
-
-```
-<div xmlns:c="http://java.sun.com/jstl/core"
-     xmlns:nxl="http://nuxeo.org/nxforms/layout"
-     xmlns:h="http://java.sun.com/jsf/html"
-     xmlns:nxh="http://nuxeo.org/nxweb/html">
-	<c:if test="#{widget.mode != 'edit'}">
-		<h:outputLink value="#{s3UtilsHelper.getS3TempSignedUrl(field)}" target="_blank">#{widget.label}</h:outputLink>
-	</c:if>	 
-  	<c:if test="#{widget.mode == 'edit'}">
-		<h:inputText value="#{field}" />
-	</c:if>	
-</div>
-```
-
-This file calls the bean's API `#{s3UtilsHelper.getS3TempSignedUrl(field)}`, passing it the value of the widget's `field` property (The label displayed for the link is stored in the `•{widget.label}` property). To easily configure this widget, you should use Nuxeo Studio:
-
-* Import the file in the "Widget Template" part of the "Resources" for your project
-* Then, in a Tab (for example, but could be in a layout), drop a "Widget Template" and set its properties:
-  1. In the "label" property, set the label you want ("Download from S3" for example)
-  2. Now, add a field (click the "+" button) and set the value to `s3info:s3_object_key`
-  3. Last, click the "Select" button to select your widget template (stored in "resources")
-
-!["Custom-Thumbnails"](https://raw.github.com/nuxeo-sandbox/nuxeo-s3-utils/master/doc-img/Studio-widget-setup.jpg)
-
-Now, save, deploy, test. Notice that if `s3info:s3_object_key` is empty, no error is triggered ()the url will be blank).
-
-In the same manner, you could use one of the other APIs of the bean (hard code some value in the xhtml, or add more fields)
-
-Here is another example of XHTML that first tests if the object exists. If yes, it outputs a regular link, else, it outputs just the rwax text:
-
-```
-<div
-	xmlns:c="http://java.sun.com/jstl/core"
-	xmlns:nxl="http://nuxeo.org/nxforms/layout"
-	xmlns:h="http://java.sun.com/jsf/html"
-	xmlns:nxh="http://nuxeo.org/nxweb/html"
-	xmlns:nxu="http://nuxeo.org/nxweb/util">
-
-	<c:if test="#{widget.mode != 'edit'}">
-		<nxu:set var="existsKey" value="#{s3UtilsHelper.existsKey(field)}">
-			<c:if test="#{existsKey}">
-				<a href="#{s3UtilsHelper.getS3TempSignedUrl('', field, 0, '', 'attachment;')}" download="true">#{widget.label}</a>
-			</c:if>
-			<c:if test="#{!existsKey}">
-				#{field}
-			</c:if>
-		</nxu:set>
-	</c:if>
-
-  	<c:if test="#{widget.mode == 'edit'}">
-		<h:inputText value="#{field}" />
-	</c:if>	
-</div>
-```
-
 ## Build and Install
 
 Assuming [maven](http://maven.apache.org/) (3.2.5) is installed on your system, after downloading the whole repository, execute the following:
@@ -310,6 +229,12 @@ These solutions are provided for inspiration and we encourage customers to use t
 This is a moving project (no API maintenance, no deprecation process, etc.) If any of these solutions are found to be useful for the Nuxeo Platform in general, they will be integrated directly into platform, not maintained here.
 
 ## About Nuxeo
-Nuxeo, developer of the leading Content Services Platform, is reinventing enterprise content management (ECM) and digital asset management (DAM). Nuxeo is fundamentally changing how people work with data and content to realize new value from digital information. Its cloud-native platform has been deployed by large enterprises, mid-sized businesses and government agencies worldwide. Customers like Verizon, Electronic Arts, ABN Amro, and the Department of Defense have used Nuxeo's technology to transform the way they do business. Founded in 2008, the company is based in New York with offices across the United States, Europe, and Asia.
+Nuxeo Platform is an open source Content Services platform, written in Java. Data can be stored in both SQL & NoSQL databases.
 
-Learn more at www.nuxeo.com.
+The development of the Nuxeo Platform is mostly done by Nuxeo employees with an open development model.
+
+The source code, documentation, roadmap, issue tracker, testing, benchmarks are all public.
+
+Typically, Nuxeo users build different types of information management solutions for [document management](https://www.nuxeo.com/solutions/document-management/), [case management](https://www.nuxeo.com/solutions/case-management/), and [digital asset management](https://www.nuxeo.com/solutions/dam-digital-asset-management/), use cases. It uses schema-flexible metadata & content models that allows content to be repurposed to fulfill future use cases.
+
+More information is available at [www.nuxeo.com](https://www.nuxeo.com).
