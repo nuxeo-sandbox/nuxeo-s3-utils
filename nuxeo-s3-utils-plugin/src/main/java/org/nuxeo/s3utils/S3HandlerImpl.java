@@ -33,13 +33,17 @@ import org.nuxeo.ecm.core.api.NuxeoException;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.HttpMethod;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import org.nuxeo.runtime.api.Framework;
+import org.nuxeo.runtime.aws.NuxeoAWSCredentialsProvider;
 
 /**
  * Wrapper class around AmazonS3
@@ -49,6 +53,8 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 public class S3HandlerImpl implements S3Handler {
 
     protected String name;
+    
+    protected String region;
 
     protected String currentBucket;
 
@@ -70,6 +76,7 @@ public class S3HandlerImpl implements S3Handler {
     public void initialize(S3HandlerDescriptor desc) throws NuxeoException {
 
         name = desc.getName();
+        region = desc.getRegion();
         currentBucket = desc.getBucket();
         signedUrlDuration = desc.getTempSignedUrlDuration();
         useCacheForExistsKey = desc.useCacheForExistsKey();
@@ -78,9 +85,14 @@ public class S3HandlerImpl implements S3Handler {
     }
 
     protected void setup(S3HandlerDescriptor desc) {
-        BasicAWSCredentials awsCredentialsProvider = new BasicAWSCredentials(desc.getAwsKey(), desc.getAwsSecret());
-        s3 = new AmazonS3Client(awsCredentialsProvider);
-
+        
+        AWSCredentialsProvider awsCredentialsProvider = NuxeoAWSCredentialsProvider.getInstance();
+        s3 = AmazonS3ClientBuilder.standard()
+                                  .withCredentials(awsCredentialsProvider)
+                                  //.withClientConfiguration(HERE SOME CONFIG?)
+                                  .withRegion(region)
+                                  .build();
+        
         if (useCacheForExistsKey) {
             keyExistsCache = new CacheForKeyExists(this);
         }

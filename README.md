@@ -1,14 +1,27 @@
 # nuxeo-s3-utils
 
-QA build status: [![Build Status](https://qa.nuxeo.org/jenkins/buildStatus/icon?job=Sandbox/sandbox_nuxeo-s3-utils-master)](https://qa.nuxeo.org/jenkins/buildStatus/icon?job=Sandbox/sandbox_nuxeo-s3-utils-master)
 
 This add-on for [Nuxeo](http://www.nuxeo.com) contains utilities for AWS S3: Operations to upload or download a file, utilities to build a temporary signed URL to S3, and a helper SEAM Bean.
 
 ## Set Up: Configuration
-### Principles
-The plugin creates a `S3Handler` tool, that is in charge of performing the actions (download, upload, ...). It connects to S3 using your key ID, secret key and the S3 bucket.
+### Principles and Authentication
+The plugin creates a `S3Handler` tool, that is in charge of performing the actions (download, upload, ...). It connects to S3 using your credentials, a region and a bucket.
 
-In order to allow connecting to several S3 accounts, and inside an S3 account, to several buckets, the plugin exposes a _service_, allowing you to access different accounts and buckets: You contribute as many S3 Handlers as you need, given each of them a unique name.
+The plugin uses Nuxeo AWS Credential code to handle authentication (the `NuxeoAWSCredentialsProvider` class), which means you must either:
+
+* Use nuxeo configuration parameters/XML extension point to set up your AWS credentials (see https://doc.nuxeo.com/nxdoc/amazon-s3-online-storage/)
+* Be already authenticated and/or you have setup the expected AWS environment variables.
+
+For example, on way to run unit tests is to: (in a terminal):
+
+* Authenticate to AWS (like, run `aws s3 ls` and authenticate)
+* Then, run `mvn install`
+
+I Nuxeo is deployed on an EC2 instance on AWS, it automatically gets the authentication and role from the instance.
+
+In order to allow connecting to several to several buckets (within the same account, as you already are authenticated to this account, the plugin exposes a _service_, allowing you to access different buckets: You contribute as many S3 Handlers as you need, given each of them a unique name.
+
+**IMPORTANT**: Of course, authentication drives permission, you must make sure the account use (or the EC2 instance running) has permission to download, upload, delete, ... in the bucket.
 
 ### Contribute the S3Utils Service
 Fo each S3 account and bucket you want to access, just add the following contribution to your Nuxeo Studio project (Advanced Settings > XML Extension). Values are explain below.
@@ -18,11 +31,10 @@ Fo each S3 account and bucket you want to access, just add the following contrib
   <s3Handler>
     <name>HANDLER_NAME</name>
     <class>org.nuxeo.s3utils.S3HandlerImpl</class>
-    <awsKey>YOUR_KEY</awsKey>
-    <awsSecret>YOUR_SECRET</awsSecret>
+    <region>THE_REGION</region>
     <bucket>THE_BUCKET</bucket>
-    <tempSignedUrlDuration>DURATION_IN_SECONDS</tempSignedUrlDuration>
-    <useCacheForExistsKey>true or flase</useCacheForExistsKey>
+    <tempSignedUrlDuration>THE_DURATION</tempSignedUrlDuration>
+    <useCacheForExistsKey>true or false</useCacheForExistsKey>
   </s3Handler>
 </extension>
 ```
@@ -30,8 +42,7 @@ Replace the values with yours:
 
 * `name`: The unique name of your handler. To be used in some operations
 * `class`: Do not change this one, keep`org.nuxeo.s3utils.S3HandlerImpl` (unless you write your own handler, see the code)
-* `awsKey`: The key to access your S3 account
-* `awsSecret`: The secret to access your S3 account
+* `region`: The region (always required, even if buckets are global)
 * `bucket`: The bucket to use for this S3 account
 * `tempSignedUrlDuration`:
   * The duration, in seconds, of a temporary signed URL.
@@ -48,16 +59,42 @@ For this purpose:
 1. Declare your custom configuration parameters in nuxeo.conf
 2. Use them in the XML declaration, using the templating language: `${your.custom.key:=}`
 
+The plugin provides default configuration parameters...
+
+```
+<extension target="org.nuxeo.s3utils.service" point="configuration">
+	<s3Handler>
+		<name>default</name>
+		<class>org.nuxeo.s3utils.S3HandlerImpl</class>
+		<region>${nuxeo.aws.s3utils.region:=}</region>
+		<bucket>${nuxeo.aws.s3utils.bucket:=}</bucket>
+		<tempSignedUrlDuration>${nuxeo.aws.s3utils.duration:=}
+		</tempSignedUrlDuration>
+		<useCacheForExistsKey>${nuxeo.aws.s3utils.use_cache_for_exists_key:=}</useCacheForExistsKey>
+	</s3Handler>
+</extension>
+```
+
+...so you can use them to set up this "default" handler:
+
+```
+# in nuxeo.conf
+nuxeo.aws.s3utils.region=eu-west-1
+nuxeo.aws.s3utils.bucket=my-test-bucket
+nuxeo.aws.s3utils.duration=300
+nuxeo.aws.s3utils.use_cache_for_exists_key=false
+
+```
+
 ## Set Up: An Example
 Using `nuxeo.conf` and XML Extension.
 
-We are going to setup 2 handlers accessing the same S3 account, but two different buckets.
+We are going to setup 2 handlers accessing the same S3 account, same region, but two different buckets.
  
 1. In `nuxeo.conf`, we add the following:
 
 ```
-mycompany.s3.keyid=123456
-mycompany.s3.secret=HERE_THE_SECRET_KEY
+nuxeo.aws.s3utils.region=eu-west-1
 mycompany.s3.bucketOne=the-bucket
 mycompany.s3.bucketTwo=the-other-bucket
 ```
@@ -70,8 +107,7 @@ mycompany.s3.bucketTwo=the-other-bucket
   <s3Handler>
     <name>S3-Bucket-one</name>
     <class>org.nuxeo.s3utils.S3HandlerImpl</class>
-    <awsKey>${mycompany.s3.keyid:=}</awsKey>
-    <awsSecret>${mycompany.s3.secret:=}</awsSecret>
+    <region>${nuxeo.aws.s3utils.region:=}</region>
     <bucket>${mycompany.s3.bucketOne:=}</bucket>
     <!-- Let default values for other parameters -->
   </s3Handler>
@@ -86,8 +122,7 @@ mycompany.s3.bucketTwo=the-other-bucket
   <s3Handler>
     <name>S3-Bucket-Two</name>
     <class>org.nuxeo.s3utils.S3HandlerImpl</class>
-    <awsKey>${mycompany.s3.keyid:=}</awsKey>
-    <awsSecret>${mycompany.s3.secret:=}</awsSecret>
+    <region>${nuxeo.aws.s3utils.region:=}</region>
     <bucket>${mycompany.s3.bucketTwo:=}</bucket>
     <tempSignedUrlDuration>60</tempSignedUrlDuration>
   </s3Handler>
@@ -191,11 +226,12 @@ The class also has a utility to test the existence of a key on S3.
 
 ## Build and Install
 
-Assuming [maven](http://maven.apache.org/) (3.2.5) is installed on your system, after downloading the whole repository, execute the following:
+Assuming [maven](http://maven.apache.org/) is installed on your system, after downloading the whole repository, execute the following:
 
 
 * Installation with unit-test (recommended):
-  * See the JavaDoc at `nuxeo-s3-utils/nuxeo-s3-utils-plugin/src/test/java/org/nuxeo/s3utils/test/TestS3TempSignedUrl.java`, and add an `aws-test.conf` file containing the required information (AWS key ID, AWS secret key, S3 bucket, file to test and its size)
+  * Add an `aws-test.conf` file containing the required information (region, S3 bucket, file to test and its size). See details in `SimpleFeatureCustom`
+  * Be pre-authenticated in the terminal
   * Then, in the terminal, run
 
   ```

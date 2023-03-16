@@ -26,9 +26,7 @@ public class Constants {
     
     public static final String DEFAULT_HANDLER_NAME = "default";
 
-    public static final String CONF_KEY_NAME_ACCESS_KEY = "nuxeo.aws.s3utils.keyid";
-
-    public static final String CONF_KEY_NAME_SECRET_KEY = "nuxeo.aws.s3utils.secret";
+    public static final String CONF_KEY_NAME_REGION = "nuxeo.aws.s3utils.region";
 
     public static final String CONF_KEY_NAME_BUCKET = "nuxeo.aws.s3utils.bucket";
 

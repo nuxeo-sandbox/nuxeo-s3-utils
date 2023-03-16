@@ -24,15 +24,15 @@ import java.io.IOException;
 import java.util.Properties;
 
 import org.nuxeo.common.utils.FileUtils;
+import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
-import org.nuxeo.runtime.test.runner.SimpleFeature;
+import org.nuxeo.runtime.test.runner.RunnerFeature;
 import org.nuxeo.s3utils.Constants;
 
 /**
- * Important: To test the feature, we don't want to hard code the AWS keys
- * (since this code could be published on GitHub for example) and we don't want
- * to hard code the bucket name or the distant object key, since everyone will
- * have a different one. There are two ways to inject the values for testing:
+ * We don't want to hard code the bucket name or the distant object key, since
+ * everyone will have a different one. There are two ways to inject the values
+ * for testing:
  * <ul>
  * <li>Use environment variables: Setup your environment and inject the expected
  * variables. This would be used when automating testing with maven for example
@@ -42,7 +42,7 @@ import org.nuxeo.s3utils.Constants;
  * <ul>
  * <li>We have a file named aws-test.conf at
  * nuxeo-s3utils-plugin/src/test/resources/</li>
- * <li>The file contains the keys, the bucket, distant object key, ... using the
+ * <li>The file declares the region, the bucket, distant object key, ... using the
  * keys defined below (TEST_CONF_KEY_NAME_AWS_KEY_ID, etc.)</li>
  * <li>The .gitignore config file ignores this file, so it is not sent on
  * GitHub</li>
@@ -51,24 +51,13 @@ import org.nuxeo.s3utils.Constants;
  * </li>
  * </ul>
  *
- *
- * So, the principles used are the following:
- * <ul>
- * <li>We have a file named aws-test.conf at
- * nuxeo-s3utils-plugin/src/test/resources/</li>
- * <li>The file contains the keys, the bucket, distant object key, ... using the
- * kesy defined below (TEST_CONF_KEY_NAME_AWS_KEY_ID, etc.)</li>
- * <li>The .gitignore config file ignores this file, so it is not sent on
- * GitHub</li>
- *
  * So, basically to run the test, create this file at
  * nuxeo-s3utils-plugin/src/test/resources/ and set the following properties:
  *
  * <pre>
  * {@code
- * test.aws.key=HERE_THE_KEY_ID
- * test.aws.secret=HERE_THE_SECRET_KEY
- * test.aws..s3.bucket=HERE_THE_NAME_OF_THE_BUCKET_TO_TEST
+ * test.aws.region=eu-west-1
+ * test.aws.s3.bucket=NAME_OF_THE_BUCKET_TO_TEST
  * test.object=somefile.pdf
  * test.object.size=HERE_THE_EXACT_SIZE_OF_somefile.pdf
  * # For upload.
@@ -83,13 +72,12 @@ import org.nuxeo.s3utils.Constants;
  *
  * @since 8.1
  */
-public class SimpleFeatureCustom extends SimpleFeature {
+@Deploy("org.nuxeo.runtime.aws")
+public class SimpleFeatureCustom implements RunnerFeature {
 
 	public static final String TEST_CONF_FILE = "aws-test.conf";
 
-	public static final String TEST_CONF_KEY_NAME_AWS_KEY_ID = "test.aws.key";
-
-	public static final String TEST_CONF_KEY_NAME_AWS_SECRET = "test.aws.secret";
+    public static final String TEST_CONF_KEY_NAME_AWS_REGION = "test.aws.region";
 
 	public static final String TEST_CONF_KEY_NAME_AWS_S3_BUCKET = "test.aws.s3.bucket";
 
@@ -100,7 +88,7 @@ public class SimpleFeatureCustom extends SimpleFeature {
 	public static final String TEST_CONF_KEY_NAME_OBJECT_SIZE = "test.object.size";
 
 	public static final String TEST_CONF_KEY_NAME_UPLOAD_FILE_KEY = "test.upload.file.key";
-
+	
 	protected static Properties props = null;
 
 	public static String getLocalProperty(String key) {
@@ -142,8 +130,7 @@ public class SimpleFeatureCustom extends SimpleFeature {
 
 		if (props == null) {
 			// Try to get environment variables
-			addEnvironmentVariable(TEST_CONF_KEY_NAME_AWS_KEY_ID);
-			addEnvironmentVariable(TEST_CONF_KEY_NAME_AWS_SECRET);
+            addEnvironmentVariable(TEST_CONF_KEY_NAME_AWS_REGION);
 			addEnvironmentVariable(TEST_CONF_KEY_NAME_AWS_S3_BUCKET);
 			addEnvironmentVariable(TEST_CONF_KEY_NAME_USE_CACHE);
 			addEnvironmentVariable(TEST_CONF_KEY_NAME_OBJECT_KEY);
@@ -152,12 +139,10 @@ public class SimpleFeatureCustom extends SimpleFeature {
 		}
 
 		if (props != null) {
-
+		    
 			Properties systemProps = System.getProperties();
-			systemProps.setProperty(Constants.CONF_KEY_NAME_ACCESS_KEY,
-					props.getProperty(TEST_CONF_KEY_NAME_AWS_KEY_ID));
-			systemProps.setProperty(Constants.CONF_KEY_NAME_SECRET_KEY,
-					props.getProperty(TEST_CONF_KEY_NAME_AWS_SECRET));
+            systemProps.setProperty(Constants.CONF_KEY_NAME_REGION,
+                    props.getProperty(TEST_CONF_KEY_NAME_AWS_REGION));
 			systemProps.setProperty(Constants.CONF_KEY_NAME_BUCKET,
 					props.getProperty(TEST_CONF_KEY_NAME_AWS_S3_BUCKET));
 			systemProps.setProperty(Constants.CONF_KEY_NAME_USECACHEFOREXISTSKEY,
@@ -170,8 +155,7 @@ public class SimpleFeatureCustom extends SimpleFeature {
 	public void stop(FeaturesRunner runner) throws Exception {
 
 		Properties p = System.getProperties();
-		p.remove(Constants.CONF_KEY_NAME_ACCESS_KEY);
-		p.remove(Constants.CONF_KEY_NAME_SECRET_KEY);
+        p.remove(Constants.CONF_KEY_NAME_REGION);
 		p.remove(Constants.CONF_KEY_NAME_BUCKET);
 		p.remove(Constants.CONF_KEY_NAME_USECACHEFOREXISTSKEY);
 	}

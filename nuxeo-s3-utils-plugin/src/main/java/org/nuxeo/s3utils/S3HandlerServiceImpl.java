@@ -127,7 +127,7 @@ public class S3HandlerServiceImpl extends DefaultComponent implements S3HandlerS
                 if (S3Handler.class.isAssignableFrom(klass)) {
                     @SuppressWarnings("unchecked")
                     Class<? extends S3Handler> s3HandlerClass = (Class<? extends S3Handler>) klass;
-                    handler = s3HandlerClass.newInstance();
+                    handler = s3HandlerClass.getDeclaredConstructor().newInstance();
                 } else {
                     throw new RuntimeException("Unknown class for S3Handler: " + klass);
                 }

@@ -23,8 +23,7 @@
 		<s3Handler>
 			<name>default</name>
 			<class>org.nuxeo.s3utils.S3HandlerImpl</class>
-			<awsKey>${nuxeo.aws.s3utils.keyid:=}</awsKey>
-			<awsSecret>${nuxeo.aws.s3utils.secret:=}</awsSecret>
+            <region>${nuxeo.aws.s3utils.region:=}</region>
 			<bucket>${nuxeo.aws.s3utils.bucket:=}</bucket>
 			<tempSignedUrlDuration>${nuxeo.aws.s3utils.duration:=}
 			</tempSignedUrlDuration>

@@ -72,7 +72,7 @@ public class TestS3TempSignedUrl {
     public void testGetTempSignedUrl() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-
+        
         String urlStr = s3Handler.buildPresignedUrl(TEST_FILE_KEY, 0, null, "filename=" + TEST_FILE_KEY);
         assertTrue(StringUtils.isNotBlank(urlStr));
 

@@ -22,6 +22,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.nuxeo.common.xmap.annotation.XNode;
 //import org.nuxeo.common.xmap.annotation.XNodeMap;
 import org.nuxeo.common.xmap.annotation.XObject;
+import org.nuxeo.runtime.api.Framework;
+import org.nuxeo.runtime.aws.AWSConfigurationService;
 
 /**
  * Class handling the S3Handler contribution. Here is an example of XML contribution. Notice that we use an expression (
@@ -33,8 +35,7 @@ import org.nuxeo.common.xmap.annotation.XObject;
  *   <s3Handler>
  *     <name>default</name>
  *     <class>org.nuxeo.s3utils.S3HandlerImpl</class>
- *     <awsKey>${nuxeo.aws.s3utils.keyid:=}</awsKey>
- *     <awsSecret>${nuxeo.aws.s3utils.secret:=}</awsSecret>
+ *     <region>${nuxeo.aws.s3utils.region:=}</region>
  *     <bucket>${nuxeo.aws.s3utils.bucket:=}</bucket>
  *     <tempSignedUrlDuration>${nuxeo.aws.s3utils.duration:=}</tempSignedUrlDuration>
  *     <useCacheForExistsKey>${nuxeo.aws.s3utils.use_cache_for_exists_key:=}</useCacheForExistsKey>
@@ -53,11 +54,8 @@ public class S3HandlerDescriptor {
     @XNode("class")
     protected Class<?> klass;
 
-    @XNode("awsKey")
-    protected String awsKey = "";
-
-    @XNode("awsSecret")
-    protected String awsSecret = "";
+    @XNode("region")
+    protected String region = "";
 
     @XNode("bucket")
     protected String bucket = "";
@@ -79,13 +77,24 @@ public class S3HandlerDescriptor {
     public Class<?> getKlass() {
         return klass;
     }
-
-    public String getAwsKey() {
-        return awsKey;
-    }
-
-    public String getAwsSecret() {
-        return awsSecret;
+    
+    public String getRegion() {
+        System.out.println("REGION 1: " + region);
+        if(StringUtils.isBlank(region)) {
+            region = Framework.getProperty(Constants.CONF_KEY_NAME_REGION);
+            System.out.println("REGION 2: " + region);
+            if(StringUtils.isBlank(region)) {
+                region = Framework.getService(AWSConfigurationService.class).getAWSRegion();
+            }
+            System.out.println("REGION 3: " + region);
+            if(StringUtils.isBlank(region)) {
+                Framework.getProperty("nuxeo.aws.region");
+            }
+        }
+        
+        System.out.println("REGION FINAL: " + region);
+        
+        return region;
     }
 
     public String getBucket() {
