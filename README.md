@@ -40,19 +40,24 @@ Fo each S3 account and bucket you want to access, just add the following contrib
 ```
 Replace the values with yours:
 
-* `name`: The unique name of your handler. To be used in some operations
-* `class`: Do not change this one, keep`org.nuxeo.s3utils.S3HandlerImpl` (unless you write your own handler, see the code)
-* `region`: The region (always required, even if buckets are global)
-* `bucket`: The bucket to use for this S3 account
-* `tempSignedUrlDuration`:
+* `name`: Required. The unique name of your handler. To be used in some operations
+* `class`: Required. Do not change this one, keep`org.nuxeo.s3utils.S3HandlerImpl` (unless you write your own handler, see the code)
+* `region`: Required.
+  * The region (always required, even if buckets are global)
+  * If this property is empty, the plugin reads the region from:
+    * The `nuxeo.aws.s3utils.region` configiration parameter
+    * If empty, reads from Nuxeo AWS configuration
+    * If still empty, reads from the `nuxeo.aws.region` confifguration parameter
+* `bucket`: Required. The bucket to use for this S3 account.
+* `tempSignedUrlDuration`: Optional.
   * The duration, in seconds, of a temporary signed URL.
-  * Optional: If not passed or negative, a default value of 1200 (2 minutes) applies
-* `useCacheForExistsKey`:
+  * If not passed or negative, a default value of 1200 (2 minutes) applies
+* `useCacheForExistsKey`: Optional.
   * pass `true` or `false`. Tell the plugin to use a cache when checking the existence of a key in the S3 bucket, to avoid calling S3 too often.
   * Default value is `false`
 
 ### Use `nuxeo.conf`
-It may be interesting to read the value from `nuxeo.conf`. This way, you can deploy the same Studio projet in different environments (typically Dev/Test/Prod), each of them using a different set of keys and buckets.
+It may be interesting to read the value from `nuxeo.conf`. This way, you can deploy the same Studio projet in different environments (typically Dev/Test/Prod), each of them using a different set of regions and buckets.
 
 For this purpose:
 
@@ -68,14 +73,13 @@ The plugin provides default configuration parameters...
 		<class>org.nuxeo.s3utils.S3HandlerImpl</class>
 		<region>${nuxeo.aws.s3utils.region:=}</region>
 		<bucket>${nuxeo.aws.s3utils.bucket:=}</bucket>
-		<tempSignedUrlDuration>${nuxeo.aws.s3utils.duration:=}
-		</tempSignedUrlDuration>
+		<tempSignedUrlDuration>${nuxeo.aws.s3utils.duration:=}</tempSignedUrlDuration>
 		<useCacheForExistsKey>${nuxeo.aws.s3utils.use_cache_for_exists_key:=}</useCacheForExistsKey>
 	</s3Handler>
 </extension>
 ```
 
-...so you can use them to set up this "default" handler:
+...so you can use them to set up the `default` handler:
 
 ```
 # in nuxeo.conf
@@ -100,7 +104,7 @@ mycompany.s3.bucketTwo=the-other-bucket
 ```
 
 2. In our Studio project, we create two XML extension
-  * First one (notice: Give whatever name you want to the XML Extension itself) uses the key, the secret and "the-bucket"
+  * First one (notice: Give whatever name you want to the XML Extension itself) uses the region and "the-bucket"
 
 ```
 <extension target="org.nuxeo.s3utils.service" point="configuration">
@@ -114,7 +118,7 @@ mycompany.s3.bucketTwo=the-other-bucket
 </extension>
 ```
 
- * Second one uses the key, the secret, "the-other-bucket", and only one minute of duration for the temporary signed URLs:
+ * Second one uses the region, "the-other-bucket", and only one minute of duration for the temporary signed URLs:
 
 ```
 <!-- Let default values for other parameters -->
@@ -130,6 +134,11 @@ mycompany.s3.bucketTwo=the-other-bucket
 ```
 
 Now, we can use the "S3-Bucket-one" or the "S3-Bucket-Two" handlers.
+
+⚠️ In this example, we don't set the values for the `default` handler ⚠️
+
+* It cannot be used (using it will fail, no bucket is defined in `nuxeo.aws.s3utils.bucket`)
+* See below: You must pass the correct handler name to the mmisc. operation you will be using.
 
 ## Features
 ### Operations
