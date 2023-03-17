@@ -273,7 +273,7 @@ public interface S3Handler {
     }
 
     /**
-     * Generic helper telling the caller if an error catched is a "MIsing Key on S3" error
+     * Generic helper telling the caller if an error catched is a "Missing Key on S3" error
      *
      * @param e
      * @return true if the error is "MIssing Key" error
