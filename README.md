@@ -193,6 +193,17 @@ The plugin contributes the following operations to be used in an Automation Chai
     * `contentDisposition`: Optional, String.<br/>
       `contentType` and `contentDisposition` are optional but it is recommended to set them to make sure the is no ambiguity when the URL is used (a key without a file extension for example)
 
+* **Files > S3 Utils: Get Object Metadata** (ID: `S3Utils.GetObjectMetadata`)
+  * Input is `void`, returns `blob`
+  * Returns a JsonBlob holding the metadata (fetching the metadata without fetching the object)
+  * Parameters:
+    * `key`: The key of the file on S3 (required)
+    * `handlerName`: The name of the S3Handler to use. Optional.
+  * **IMPORTANT**: If `key` is not found, returns an empty object (`{}`)
+  * Else, returns:
+    * The system metadata ("Content-Type", "Content-Length", "ETag", ...)
+    * Plus some other properties: `bucket`, `key` and `userMetadata`, which is a Json object (can be empty) holding all the user metadata for the object.
+  * Notice: When a metadata is not set, it is not returned by AWS (for example, Content-Encoding, of md5 are not always there)
 
 #### How to Import these Operations in your Project?
 The principles are:

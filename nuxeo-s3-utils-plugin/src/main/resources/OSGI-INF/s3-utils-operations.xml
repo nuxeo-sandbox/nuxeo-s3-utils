@@ -6,6 +6,7 @@
     <operation class="org.nuxeo.s3utils.operations.S3DeleteOp" />
     <operation class="org.nuxeo.s3utils.operations.S3KeyExistsOp" />
     <operation class="org.nuxeo.s3utils.operations.S3TempSignedUrlOp" />
+    <operation class="org.nuxeo.s3utils.operations.S3GetObjectMetadataOp" />
   </extension>
 
   <!-- By default, limit some operations to administrators -->

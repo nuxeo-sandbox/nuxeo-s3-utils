@@ -24,8 +24,12 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.NuxeoException;
@@ -34,15 +38,18 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.HttpMethod;
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import org.nuxeo.runtime.api.Framework;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import org.nuxeo.runtime.aws.NuxeoAWSCredentialsProvider;
 
 /**
@@ -51,6 +58,8 @@ import org.nuxeo.runtime.aws.NuxeoAWSCredentialsProvider;
  * @since 8.1
  */
 public class S3HandlerImpl implements S3Handler {
+    
+    protected static final Log log = LogFactory.getLog(S3HandlerImpl.class);
 
     protected String name;
     
@@ -281,6 +290,34 @@ public class S3HandlerImpl implements S3Handler {
         } else {
             return existsKeyInS3(inBucket, inKey);
         }
+    }
+    
+    @Override
+    public JsonNode getObjectMetadata(String inKey) throws JsonProcessingException {
+        
+        ObjectMetadata metadata;
+        try {
+            metadata = s3.getObjectMetadata(currentBucket, inKey);
+        } catch(AmazonS3Exception e) {
+            if(e.getErrorMessage().toLowerCase().equals("not found")) {
+                return null;
+            }
+            throw e;
+        }
+        
+        Map<String, Object> metadataMap = metadata.getRawMetadata();
+        Map<String, Object> mutableMap = new HashMap<String, Object>(metadataMap);
+        mutableMap.put("bucketName",currentBucket );
+        mutableMap.put("objectKey", inKey);
+        
+        Map<String, String> userMetadata = metadata.getUserMetadata();
+        mutableMap.put("userMetadata", userMetadata);
+
+        // Convert Map to JSON
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode json = objectMapper.valueToTree(mutableMap);
+        
+        return json;
     }
 
     @Override

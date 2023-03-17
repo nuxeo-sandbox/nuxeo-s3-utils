@@ -24,6 +24,7 @@ import java.io.File;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
+import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -45,10 +46,13 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.s3utils.Constants;
 import org.nuxeo.s3utils.S3Handler;
 import org.nuxeo.s3utils.operations.S3DownloadOp;
+import org.nuxeo.s3utils.operations.S3GetObjectMetadataOp;
 import org.nuxeo.s3utils.operations.S3KeyExistsOp;
 import org.nuxeo.s3utils.operations.S3TempSignedUrlOp;
 import org.nuxeo.s3utils.operations.S3UploadOp;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 
 /**
@@ -282,6 +286,46 @@ public class TestOperations {
         File f = TestUtils.downloadFile(urlStr);
         assertNull(f);
 
+    }
+    
+    @Test
+    public void testGetObjectMetadata() throws Exception {
+        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+
+        OperationChain chain;
+        OperationContext ctx = new OperationContext(coreSession);
+        chain = new OperationChain("testGetObjectMetadata-1");
+        chain.add(S3GetObjectMetadataOp.ID).set("key", TEST_FILE_KEY);
+        
+        Blob result = (Blob) automationService.run(ctx, chain);
+        assertNotNull(result);
+        
+        JSONObject obj = new JSONObject(result.getString());
+        String str = obj.getString("Content-Type");
+        assertEquals("application/pdf", str);
+        
+        long length = obj.getLong("Content-Length");
+        assertEquals(TEST_FILE_SIZE, length);
+        
+        str = obj.getString("ETag");
+        assertTrue(StringUtils.isNoneBlank(str));
+        
+    }
+    
+    @Test
+    public void testGetObjectMetadataShouldNotFindKey() throws Exception {
+        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+
+        OperationChain chain;
+        OperationContext ctx = new OperationContext(coreSession);
+        chain = new OperationChain("testGetObjectMetadata-1");
+        chain.add(S3GetObjectMetadataOp.ID).set("key", UUID.randomUUID().toString());
+        
+        Blob result = (Blob) automationService.run(ctx, chain);
+        assertNotNull(result);        
+        
+        assertEquals("{}", result.getString());
+        
     }
 
 }

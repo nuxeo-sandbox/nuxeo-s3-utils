@@ -38,6 +38,8 @@ import org.nuxeo.s3utils.CacheForKeyExists;
 import org.nuxeo.s3utils.Constants;
 import org.nuxeo.s3utils.S3Handler;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 /**
  * See {@link SimpleFeatureCustom} for explanation about the local configuration file used for testing.
  *
@@ -126,6 +128,23 @@ public class TestS3Handler {
         exists = s3Handler.existsKeyInS3(uploadKey);
         assertFalse(exists);
 
+    }
+    
+    @Test
+    public void testObjectMetadata() throws Exception {
+        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        
+        JsonNode json = s3Handler.getObjectMetadata(TEST_FILE_KEY);
+        assertNotNull(json);
+                
+        JsonNode part = json.get("Content-Length");
+        assertEquals(TEST_FILE_SIZE, part.asLong());
+        
+        part = json.get("Content-Type");
+        assertEquals("application/pdf", part.asText());
+        
+        part = json.get("ETag");
+        assertTrue(StringUtils.isNoneBlank(part.asText()));
     }
 
     @Test

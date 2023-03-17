@@ -28,6 +28,8 @@ import org.nuxeo.runtime.api.Framework;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * Interface to be used by any S3Handler.
@@ -201,6 +203,25 @@ public interface S3Handler {
      * @since 8.2
      */
     public boolean existsKey(String bucket, String inKey);
+
+    /**
+     * Gets the object metadata without fetching the object itself.
+     * Values returned are whatever is stored as system metadata,
+     * such as "Content-Type", "Content-Length", "ETag", ...
+     * _plus_ the following properties:
+     * <ul>
+     * <li>"bucket": the bucket name (same as the one defined for the S3Handler)</li>
+     * <li>"objectKey": the object key (same as the inKey parameter)</li>
+     * <li>"userMetadata": An object holding the user metadata ({} if no user metadata). All values are String.</li>
+     * </ul>
+     * If AWS returns a "not found" error, the method returns null and adds a WARN to the log. Any other error is thrown
+     * 
+     * @param inKey
+     * @return a JsonNode of all the metadata, including userMetadata
+     * @throws JsonProcessingException
+     * @since 2.0
+     */
+    public JsonNode getObjectMetadata(String inKey) throws JsonProcessingException;
 
     /**
      * Return the current bucket
