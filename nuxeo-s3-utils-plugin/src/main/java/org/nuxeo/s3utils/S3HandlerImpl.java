@@ -45,6 +45,11 @@ import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.transfer.Download;
+import com.amazonaws.services.s3.transfer.TransferManager;
+import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
+import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
+import com.amazonaws.services.s3.transfer.Upload;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -72,8 +77,14 @@ public class S3HandlerImpl implements S3Handler {
     protected boolean useCacheForExistsKey;
 
     protected AmazonS3 s3;
+    
+    protected TransferManager transferManager;
 
     protected CacheForKeyExists keyExistsCache = null;
+    
+    protected long minimumUploadPartSize;
+    
+    long multipartUploadThreshold;
 
     /**
      * Caller must call {@link initialize} right after creating creating a new instance
@@ -89,6 +100,13 @@ public class S3HandlerImpl implements S3Handler {
         currentBucket = desc.getBucket();
         signedUrlDuration = desc.getTempSignedUrlDuration();
         useCacheForExistsKey = desc.useCacheForExistsKey();
+        
+        minimumUploadPartSize = desc.getMinimumUploadPartSize();
+        multipartUploadThreshold = desc.getMultipartUploadThreshold();
+        
+        TransferManagerConfiguration conf = new TransferManagerConfiguration();
+        conf.getMinimumUploadPartSize();
+        conf.getMultipartUploadThreshold();
 
         setup(desc);
     }
@@ -101,6 +119,18 @@ public class S3HandlerImpl implements S3Handler {
                                   //.withClientConfiguration(HERE SOME CONFIG?)
                                   .withRegion(region)
                                   .build();
+        
+        transferManager = TransferManagerBuilder.standard()
+                                                .withS3Client(s3)
+                                                .withMinimumUploadPartSize(minimumUploadPartSize)
+                                                .withMultipartUploadThreshold(multipartUploadThreshold)
+                                                /*
+                                                .withMultipartCopyThreshold(Long.valueOf(getLongProperty(
+                                                        MULTIPART_COPY_THRESHOLD_PROPERTY, MULTIPART_COPY_THRESHOLD_DEFAULT)))
+                                                .withMultipartCopyPartSize(Long.valueOf(getMultipartCopyPartSize()))
+                                                */
+                                                .withAlwaysCalculateMultipartMd5(true)
+                                                .build();
         
         if (useCacheForExistsKey) {
             keyExistsCache = new CacheForKeyExists(this);
@@ -121,7 +151,11 @@ public class S3HandlerImpl implements S3Handler {
 
         boolean ok = false;
         try {
-            s3.putObject(new PutObjectRequest(currentBucket, inKey, inFile));
+            //s3.putObject(new PutObjectRequest(currentBucket, inKey, inFile));
+
+            Upload upload = transferManager.upload(currentBucket, inKey, inFile);
+            // Be synchronous
+            upload.waitForCompletion();
             ok = true;
         } catch (AmazonServiceException ase) {
             String message = S3Handler.buildDetailedMessageFromAWSException(ase);
@@ -130,7 +164,11 @@ public class S3HandlerImpl implements S3Handler {
         } catch (AmazonClientException ace) {
             String message = S3Handler.buildDetailedMessageFromAWSException(ace);
             throw new NuxeoException(message);
+        } catch (InterruptedException ie) {
+            String message = S3Handler.buildDetailedMessageFromAWSException(ie);
+            throw new NuxeoException(message);
         }
+        
         return ok;
     }
 
@@ -148,7 +186,10 @@ public class S3HandlerImpl implements S3Handler {
 
         try {
             GetObjectRequest gor = new GetObjectRequest(currentBucket, inKey);
-            metadata = s3.getObject(gor, blob.getFile());
+            //metadata = s3.getObject(gor, blob.getFile());
+            Download download = transferManager.download(gor,  blob.getFile());
+            download.waitForCompletion();
+            metadata = download.getObjectMetadata();
 
         } catch (AmazonServiceException ase) {
             String message = S3Handler.buildDetailedMessageFromAWSException(ase);
@@ -156,6 +197,10 @@ public class S3HandlerImpl implements S3Handler {
 
         } catch (AmazonClientException ace) {
             String message = S3Handler.buildDetailedMessageFromAWSException(ace);
+            throw new NuxeoException(message);
+            
+        } catch (InterruptedException ie) {
+            String message = S3Handler.buildDetailedMessageFromAWSException(ie);
             throw new NuxeoException(message);
         }
 

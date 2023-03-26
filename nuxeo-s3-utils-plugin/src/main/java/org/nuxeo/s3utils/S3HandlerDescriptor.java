@@ -25,6 +25,8 @@ import org.nuxeo.common.xmap.annotation.XObject;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.aws.AWSConfigurationService;
 
+import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
+
 /**
  * Class handling the S3Handler contribution. Here is an example of XML contribution. Notice that we use an expression (
  * <code>${avalue:=}</code>) that allows to fill the value from the configuration (typically, nuxeo.conf) at startup.
@@ -39,6 +41,14 @@ import org.nuxeo.runtime.aws.AWSConfigurationService;
  *     <bucket>${nuxeo.aws.s3utils.bucket:=}</bucket>
  *     <tempSignedUrlDuration>${nuxeo.aws.s3utils.duration:=}</tempSignedUrlDuration>
  *     <useCacheForExistsKey>${nuxeo.aws.s3utils.use_cache_for_exists_key:=}</useCacheForExistsKey>
+ *     
+ *     <!-- No values => Use the default AWS SDK config (com.amazonaws.services.s3.transfer.TransferManagerConfiguration) -->
+ *     <!-- Here, we set the values as the default values for the current AWS SDK -->
+ *     <!-- 5MB (5242880) -->
+ *     <minimumUploadPartSize>${nuxeo.aws.s3utils.minimumUploadPartSize:=}</minimumUploadPartSize>
+ *     <!-- 16MB (16777216) -->
+ *     <multipartUploadThreshold>${nuxeo.aws.s3utils.multipartUploadThreshold:=}</multipartUploadThreshold>
+ *     
  *   </s3Handler>
  *  </extension>
  * </pre></code>
@@ -65,10 +75,18 @@ public class S3HandlerDescriptor {
 
     @XNode("useCacheForExistsKey")
     protected String useCacheForExistsKey = "false";
+    
+    @XNode("minimumUploadPartSize")
+    protected Long minimumUploadPartSize = 0L;
+    
+    @XNode("multipartUploadThreshold")
+    protected Long multipartUploadThreshold = 0L;
 
     protected int signedUrlDuration = -1;
 
     protected int useExistsKeyCache = -1;
+    
+    protected TransferManagerConfiguration transferManagerConfiguration = new TransferManagerConfiguration();
 
     public String getName() {
         return name;
@@ -127,6 +145,22 @@ public class S3HandlerDescriptor {
             }
         }
         return signedUrlDuration;
+    }
+    
+    public long getMinimumUploadPartSize() {
+        if(minimumUploadPartSize == 0) {
+            minimumUploadPartSize = transferManagerConfiguration.getMinimumUploadPartSize();
+        }
+        
+        return minimumUploadPartSize;
+    }
+    
+    public long getMultipartUploadThreshold() {
+        if(multipartUploadThreshold == 0) {
+            multipartUploadThreshold = transferManagerConfiguration.getMultipartUploadThreshold();
+        }
+        
+        return multipartUploadThreshold;
     }
 
 }

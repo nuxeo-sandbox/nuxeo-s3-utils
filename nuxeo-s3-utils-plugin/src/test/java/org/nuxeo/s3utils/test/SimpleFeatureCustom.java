@@ -147,6 +147,9 @@ public class SimpleFeatureCustom implements RunnerFeature {
 					props.getProperty(TEST_CONF_KEY_NAME_AWS_S3_BUCKET));
 			systemProps.setProperty(Constants.CONF_KEY_NAME_USECACHEFOREXISTSKEY,
 					props.getProperty(TEST_CONF_KEY_NAME_USE_CACHE));
+			
+			systemProps.setProperty("nuxeo.aws.s3utils.minimumUploadPartSize", "0");
+            systemProps.setProperty("nuxeo.aws.s3utils.multipartUploadThreshold", "0");
 
 		}
 	}

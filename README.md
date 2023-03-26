@@ -35,6 +35,13 @@ Fo each S3 account and bucket you want to access, just add the following contrib
     <bucket>THE_BUCKET</bucket>
     <tempSignedUrlDuration>THE_DURATION</tempSignedUrlDuration>
     <useCacheForExistsKey>true or false</useCacheForExistsKey>
+    
+    <!-- REQUIRED
+         Multipart upload is always possible.
+         These values must be set and not empty. Set it to 0
+         if you want to use the default values -->
+    <minimumUploadPartSize>0</minimumUploadPartSize>
+    <multipartUploadThreshold>0</multipartUploadThreshold>
   </s3Handler>
 </extension>
 ```
@@ -55,6 +62,13 @@ Replace the values with yours:
 * `useCacheForExistsKey`: Optional.
   * pass `true` or `false`. Tell the plugin to use a cache when checking the existence of a key in the S3 bucket, to avoid calling S3 too often.
   * Default value is `false`
+* `minimumUploadPartSize` and `multipartUploadThreshold`
+  * **These values must be set and cannot be empty**, or the start of Nuxeo will fail with a conversion error.
+  * The plugin uses Amazon S3 TransferManager to optimize uploads and perform a multipart upload when needed
+  * Set these values to `0` to use the default values (As in current AWS SDK, 5MB for `minimumUploadPartSize` and 16MB for `multipartUploadThreshold`)
+  * `minimumUploadPartSize`: AWS SDK JavaDoc: "Sets the minimum part size for upload parts. Decreasing the minimum part size will cause multipart uploads to be split into a larger number of smaller parts. Setting this value too low can have a negative effect on transfer speeds since it will cause extra latency and network communication for each part."
+  * `multipartUploadThreshold `: AWS SDK JavaDoc: "Sets the size threshold, in bytes, for when to use multipart uploads. Uploads over this size will automatically use a multipart upload strategy, while uploads smaller than this threshold will use a single connection to upload the whole object."
+  * The default values suit most of cases, but if you network allows for different settings and better performance, you can change the values.
 
 ### Use `nuxeo.conf`
 It may be interesting to read the value from `nuxeo.conf`. This way, you can deploy the same Studio projet in different environments (typically Dev/Test/Prod), each of them using a different set of regions and buckets.
@@ -75,6 +89,8 @@ The plugin provides default configuration parameters...
 		<bucket>${nuxeo.aws.s3utils.bucket:=}</bucket>
 		<tempSignedUrlDuration>${nuxeo.aws.s3utils.duration:=}</tempSignedUrlDuration>
 		<useCacheForExistsKey>${nuxeo.aws.s3utils.use_cache_for_exists_key:=}</useCacheForExistsKey>
+		<minimumUploadPartSize>${nuxeo.aws.s3utils.minimumUploadPartSize:=}</minimumUploadPartSize>
+    <multipartUploadThreshold>${nuxeo.aws.s3utils.multipartUploadThreshold:=}</multipartUploadThreshold>
 	</s3Handler>
 </extension>
 ```
@@ -87,6 +103,9 @@ nuxeo.aws.s3utils.region=eu-west-1
 nuxeo.aws.s3utils.bucket=my-test-bucket
 nuxeo.aws.s3utils.duration=300
 nuxeo.aws.s3utils.use_cache_for_exists_key=false
+# Using default values:
+nuxeo.aws.s3utils.minimumUploadPartSize=0
+nuxeo.aws.s3utils.multipartUploadThreshold=0
 
 ```
 
@@ -101,6 +120,8 @@ We are going to setup 2 handlers accessing the same S3 account, same region, but
 nuxeo.aws.s3utils.region=eu-west-1
 mycompany.s3.bucketOne=the-bucket
 mycompany.s3.bucketTwo=the-other-bucket
+nuxeo.aws.s3utils.minimumUploadPartSize=0
+nuxeo.aws.s3utils.multipartUploadThreshold=0
 ```
 
 2. In our Studio project, we create two XML extension
@@ -113,6 +134,8 @@ mycompany.s3.bucketTwo=the-other-bucket
     <class>org.nuxeo.s3utils.S3HandlerImpl</class>
     <region>${nuxeo.aws.s3utils.region:=}</region>
     <bucket>${mycompany.s3.bucketOne:=}</bucket>
+	 <minimumUploadPartSize>${nuxeo.aws.s3utils.minimumUploadPartSize:=}</minimumUploadPartSize>
+    <multipartUploadThreshold>${nuxeo.aws.s3utils.multipartUploadThreshold:=}</multipartUploadThreshold>
     <!-- Let default values for other parameters -->
   </s3Handler>
 </extension>
@@ -129,6 +152,8 @@ mycompany.s3.bucketTwo=the-other-bucket
     <region>${nuxeo.aws.s3utils.region:=}</region>
     <bucket>${mycompany.s3.bucketTwo:=}</bucket>
     <tempSignedUrlDuration>60</tempSignedUrlDuration>
+    <minimumUploadPartSize>${nuxeo.aws.s3utils.minimumUploadPartSize:=}</minimumUploadPartSize>
+    <multipartUploadThreshold>${nuxeo.aws.s3utils.multipartUploadThreshold:=}</multipartUploadThreshold>
   </s3Handler>
 </extension>
 ```
@@ -154,6 +179,7 @@ The plugin contributes the following operations to be used in an Automation Chai
     * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
     * `key`: The key to use for S3 storage
     * `xpath`: When the input is `Document`, the field to use. Default value is the main blob, `file:content`.
+  * *Notice* Upload uses Amazon `TransferManager`and will perform multipart uploads depending on the values set in the configuration (`minimumUploadPartSize`  and `multipartUploadThreshold`). See explanations above.
 
 
 * **Files > S3 Utils: Download** (ID: `S3Utils.Download`)

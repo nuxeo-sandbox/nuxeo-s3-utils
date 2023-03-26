@@ -28,6 +28,13 @@
 			<tempSignedUrlDuration>${nuxeo.aws.s3utils.duration:=}
 			</tempSignedUrlDuration>
 			<useCacheForExistsKey>${nuxeo.aws.s3utils.use_cache_for_exists_key:=}</useCacheForExistsKey>
+      
+            <!-- No values => Use the default AWS SDK config (com.amazonaws.services.s3.transfer.TransferManagerConfiguration) -->
+            <!-- Here, we set the values as the default values for the current AWS SDK -->
+            <!-- 5MB (5242880) -->
+            <minimumUploadPartSize>${nuxeo.aws.s3utils.minimumUploadPartSize:=}</minimumUploadPartSize>
+            <!-- 16MB (16777216) -->
+            <multipartUploadThreshold>${nuxeo.aws.s3utils.multipartUploadThreshold:=}</multipartUploadThreshold>
 		</s3Handler>
 	</extension>
 
