@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<component name="nuxeo.s3.utils.test.s3blobprovider" version="1.0">
+
+  <extension target="org.nuxeo.ecm.core.blob.BlobManager" point="configuration">
+    <blobprovider name="TestS3BlobProvider-XML">
+      <class>org.nuxeo.s3utils.S3UtilsBlobProvider</class>
+      <property name="preventUserUpdate">true</property>
+      <!--  All other properties: default values -->
+      <!--
+      <property name="cachesize"></property>
+      <property name="cachecount"></property>
+      <property name="cacheminage"></property>
+      <property name="s3handler"></property>
+      -->
+    </blobprovider>
+  </extension>
+
+</component>

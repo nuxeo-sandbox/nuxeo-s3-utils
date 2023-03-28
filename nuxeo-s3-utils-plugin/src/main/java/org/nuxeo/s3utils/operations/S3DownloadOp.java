@@ -62,7 +62,7 @@ public class S3DownloadOp {
         if (StringUtils.isNotBlank(bucket)) {
             s3Handler.setBucket(bucket);
         }
-        result = s3Handler.downloadFile(key, null);
+        result = s3Handler.downloadFile(key, (String) null);
 
         return result;
     }

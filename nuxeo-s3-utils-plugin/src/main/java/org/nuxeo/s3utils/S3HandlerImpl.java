@@ -27,12 +27,14 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.NuxeoException;
+import org.nuxeo.ecm.core.api.impl.blob.FileBlob;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
@@ -171,23 +173,16 @@ public class S3HandlerImpl implements S3Handler {
         
         return ok;
     }
-
+    
     @Override
-    public Blob downloadFile(String inKey, String inFileName) throws NuxeoException {
-
+    public Blob downloadFile(String inKey, File inDestFile) {
+        
         ObjectMetadata metadata = null;
-
-        Blob blob;
-        try {
-            blob = Blobs.createBlobWithExtension(".tmp");
-        } catch (IOException e) {
-            throw new NuxeoException(e);
-        }
 
         try {
             GetObjectRequest gor = new GetObjectRequest(currentBucket, inKey);
             //metadata = s3.getObject(gor, blob.getFile());
-            Download download = transferManager.download(gor,  blob.getFile());
+            Download download = transferManager.download(gor, inDestFile);
             download.waitForCompletion();
             metadata = download.getObjectMetadata();
 
@@ -203,19 +198,33 @@ public class S3HandlerImpl implements S3Handler {
             String message = S3Handler.buildDetailedMessageFromAWSException(ie);
             throw new NuxeoException(message);
         }
+        
+        Blob blob = new FileBlob(inDestFile);
+        blob.setDigest(metadata.getETag());
+        blob.setEncoding(metadata.getContentEncoding());
+        blob.setFilename(inDestFile.getName());
+        blob.setMimeType(metadata.getContentType());
 
-        if (metadata != null && blob.getFile().exists()) {
-            if (StringUtils.isBlank(inFileName)) {
-                int pos = inKey.lastIndexOf("/");
-                if (pos > -1) {
-                    inFileName = inKey.substring(pos + 1, inKey.length());
-                } else {
-                    inFileName = inKey;
-                }
-            }
-            blob.setFilename(inFileName);
-            blob.setMimeType(metadata.getContentType());
+        return blob;
+    }
+    
+
+    @Override
+    public Blob downloadFile(String inKey, String inFileName) throws NuxeoException {
+
+        Blob blob;
+        try {
+            blob = Blobs.createBlobWithExtension(".tmp");
+        } catch (IOException e) {
+            throw new NuxeoException(e);
         }
+        
+        blob = downloadFile(inKey, blob.getFile());
+        if (StringUtils.isBlank(inFileName)) {
+            inFileName = FilenameUtils.getName(inKey);
+        }
+        blob.setFilename(inFileName);
+        
         return blob;
     }
 
@@ -347,7 +356,7 @@ public class S3HandlerImpl implements S3Handler {
             if(e.getErrorMessage().toLowerCase().equals("not found")) {
                 return null;
             }
-            throw e;
+            throw new NuxeoException(String.format("Could not get key %s in AWS bucket %s", inKey, currentBucket),e);
         }
         
         Map<String, Object> metadataMap = metadata.getRawMetadata();

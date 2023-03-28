@@ -91,9 +91,21 @@ public interface S3Handler {
     public boolean sendFile(String inKey, File inFile) throws NuxeoException;
 
     /**
-     * Downloads the file from S3 using the "current bucket".
+     * Downloads the file from S3 using the "current bucket", saving it to inDestFile
      * <p>
      * <code>fileName</code> should be optional (not required by the interface)
+     *
+     * @param inKey
+     * @param inDestFile
+     * @return a Blob of the downloaded file
+     * @throws NuxeoException
+     * @since 8.2
+     */
+    public Blob downloadFile(String inKey, File inDestFile);
+
+    /**
+     * Downloads the file from S3 using the "current bucket". Should return
+     * a temporary blob (becomes permanent if stored in a document)
      *
      * @param inKey
      * @param inFileName
@@ -101,7 +113,7 @@ public interface S3Handler {
      * @throws NuxeoException
      * @since 8.2
      */
-    public Blob downloadFile(String inKey, String inFileName) throws NuxeoException;
+    public Blob downloadFile(String inKey, String inFileName);
 
     /**
      * Deletes the file from S3 using the "current bucket", returns true if succesful

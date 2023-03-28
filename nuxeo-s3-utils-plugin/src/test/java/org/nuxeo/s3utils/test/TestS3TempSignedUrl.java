@@ -26,6 +26,7 @@ import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.nuxeo.common.utils.RFC2231;
 import org.nuxeo.ecm.platform.test.PlatformFeature;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
@@ -73,7 +74,8 @@ public class TestS3TempSignedUrl {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
         
-        String urlStr = s3Handler.buildPresignedUrl(TEST_FILE_KEY, 0, null, "filename=" + TEST_FILE_KEY);
+        //String urlStr = s3Handler.buildPresignedUrl(TEST_FILE_KEY, 0, null, "filename=" + TEST_FILE_KEY);
+        String urlStr = s3Handler.buildPresignedUrl(TEST_FILE_KEY, 0, null, RFC2231.encodeContentDisposition(TEST_FILE_KEY, false, null));
         assertTrue(StringUtils.isNotBlank(urlStr));
 
         // We must be able to download the file without authentication

@@ -83,7 +83,7 @@ public class TestS3Handler {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
 
-        Blob result = s3Handler.downloadFile(TEST_FILE_KEY, null);
+        Blob result = s3Handler.downloadFile(TEST_FILE_KEY, (String) null);
         assertNotNull(result);
 
         File f = result.getFile();
