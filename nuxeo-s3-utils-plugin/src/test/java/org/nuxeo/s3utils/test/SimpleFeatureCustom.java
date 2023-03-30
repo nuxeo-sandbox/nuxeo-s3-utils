@@ -56,11 +56,18 @@ import org.nuxeo.s3utils.Constants;
  *
  * <pre>
  * {@code
+ * #User: TestForPlugins
  * test.aws.region=eu-west-1
- * test.aws.s3.bucket=NAME_OF_THE_BUCKET_TO_TEST
- * test.object=somefile.pdf
- * test.object.size=HERE_THE_EXACT_SIZE_OF_somefile.pdf
- * # For upload.
+ * test.aws.s3.bucket=eu-west-1-demo-bucket
+ * test.use.cache=true
+ * #These files must exist in this bucket
+ * test.object.key=used-in-unit-test-do-not-change.pdf
+ * test.object.size=135377
+ * test.object.mimetype=application/pdf
+ * test.image.key=used-in-unit-test-do-not-change.jpg
+ * test.image.size=879394
+ * test.image.mimetype=image/jpeg
+ * # For upload
  * test.upload.file.key=Brief.pdf
  * }
  * </pre>
@@ -86,6 +93,14 @@ public class SimpleFeatureCustom implements RunnerFeature {
 	public static final String TEST_CONF_KEY_NAME_OBJECT_KEY = "test.object.key";
 
 	public static final String TEST_CONF_KEY_NAME_OBJECT_SIZE = "test.object.size";
+
+    public static final String TEST_CONF_KEY_NAME_OBJECT_MIMETYPE = "test.object.mimetype";
+
+    public static final String TEST_CONF_KEY_NAME_IMAGE_KEY = "test.image.key";
+
+    public static final String TEST_CONF_KEY_NAME_IMAGE_SIZE = "test.image.size";
+
+    public static final String TEST_CONF_KEY_NAME_IMAGE_MIMETYPE = "test.image.mimetype";
 
 	public static final String TEST_CONF_KEY_NAME_UPLOAD_FILE_KEY = "test.upload.file.key";
 	

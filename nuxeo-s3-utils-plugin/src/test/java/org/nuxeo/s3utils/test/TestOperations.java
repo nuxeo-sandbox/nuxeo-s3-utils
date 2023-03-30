@@ -40,19 +40,20 @@ import org.nuxeo.ecm.automation.test.AutomationFeature;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.impl.blob.FileBlob;
+import org.nuxeo.ecm.core.blob.ManagedBlob;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
+import org.nuxeo.s3utils.BlobKey;
 import org.nuxeo.s3utils.Constants;
 import org.nuxeo.s3utils.S3Handler;
+import org.nuxeo.s3utils.operations.S3BlobProviderCreateBlobForObjectKeyOp;
 import org.nuxeo.s3utils.operations.S3DownloadOp;
 import org.nuxeo.s3utils.operations.S3GetObjectMetadataOp;
 import org.nuxeo.s3utils.operations.S3KeyExistsOp;
 import org.nuxeo.s3utils.operations.S3TempSignedUrlOp;
 import org.nuxeo.s3utils.operations.S3UploadOp;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 
 /**
@@ -66,146 +67,153 @@ import com.google.inject.Inject;
 @Deploy({ "nuxeo-s3-utils" })
 public class TestOperations {
 
-	protected static S3Handler s3Handler;
+    protected static S3Handler s3Handler;
 
-	protected static String TEST_FILE_KEY = null;
+    protected static String TEST_FILE_KEY = null;
 
-	protected static String UPLOAD_KEY = null;
+    protected static String UPLOAD_KEY = null;
 
-	protected static long TEST_FILE_SIZE = -1;
+    protected static long TEST_FILE_SIZE = -1;
 
-	protected static final String FILE_TO_UPLOAD = "Brief.pdf";
+    protected static String TEST_FILE_MIMETYPE = null;
 
-	@Inject
-	CoreSession coreSession;
+    protected static final String FILE_TO_UPLOAD = "Brief.pdf";
 
-	@Inject
-	AutomationService automationService;
+    @Inject
+    CoreSession coreSession;
 
-	@Before
-	public void setup() throws Exception {
+    @Inject
+    AutomationService automationService;
 
-		if (SimpleFeatureCustom.hasLocalTestConfiguration()) {
-			// Sanity check
-			TEST_FILE_KEY = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY);
-			assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY,
-					StringUtils.isNotBlank(TEST_FILE_KEY));
+    @Before
+    public void setup() throws Exception {
 
-			String sizeStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE);
-			assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE,
-					StringUtils.isNotBlank(sizeStr));
-			TEST_FILE_SIZE = Long.parseLong(sizeStr);
+        if (SimpleFeatureCustom.hasLocalTestConfiguration()) {
+            // Sanity check
+            TEST_FILE_KEY = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY);
+            assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY,
+                    StringUtils.isNotBlank(TEST_FILE_KEY));
 
-			UPLOAD_KEY = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_UPLOAD_FILE_KEY);
-			assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_UPLOAD_FILE_KEY,
-					StringUtils.isNotBlank(UPLOAD_KEY));
+            String sizeStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE);
+            assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE,
+                    StringUtils.isNotBlank(sizeStr));
+            TEST_FILE_SIZE = Long.parseLong(sizeStr);
 
-			s3Handler = S3Handler.getS3Handler(Constants.DEFAULT_HANDLER_NAME);
-		}
+            TEST_FILE_MIMETYPE = SimpleFeatureCustom.getLocalProperty(
+                    SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_MIMETYPE);
+            assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_MIMETYPE,
+                    StringUtils.isNotBlank(TEST_FILE_MIMETYPE));
 
-	}
+            UPLOAD_KEY = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_UPLOAD_FILE_KEY);
+            assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_UPLOAD_FILE_KEY,
+                    StringUtils.isNotBlank(UPLOAD_KEY));
 
-	@After
-	public void cleanup() {
+            s3Handler = S3Handler.getS3Handler(Constants.DEFAULT_HANDLER_NAME);
+        }
 
-		deleteTestFileOnS3();
-	}
+    }
 
-	protected void deleteTestFileOnS3() {
+    @After
+    public void cleanup() {
 
-		if (StringUtils.isNotBlank(UPLOAD_KEY)) {
-			try {
-				s3Handler.deleteFile(UPLOAD_KEY);
-			} catch (Exception e) {
-				// Ignore
-			}
-		}
-	}
+        deleteTestFileOnS3();
+    }
 
-	@Test
-	public void testUpload() throws Exception {
+    protected void deleteTestFileOnS3() {
 
-		Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        if (StringUtils.isNotBlank(UPLOAD_KEY)) {
+            try {
+                s3Handler.deleteFile(UPLOAD_KEY);
+            } catch (Exception e) {
+                // Ignore
+            }
+        }
+    }
 
-		// Delete in case it already exist from an interrupted previous test
-		deleteTestFileOnS3();
+    @Test
+    public void testUpload() throws Exception {
 
-		boolean exists = s3Handler.existsKeyInS3(UPLOAD_KEY);
-		assertFalse(exists);
+        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
 
-		File file = FileUtils.getResourceFileFromContext(FILE_TO_UPLOAD);
-		Blob blob = new FileBlob(file);
+        // Delete in case it already exist from an interrupted previous test
+        deleteTestFileOnS3();
 
-		OperationChain chain;
-		OperationContext ctx = new OperationContext(coreSession);
-		ctx.setInput(blob);
-		chain = new OperationChain("testWithDefault");
-		chain.add(S3UploadOp.ID).set("key", UPLOAD_KEY);
-		Blob result = (Blob) automationService.run(ctx, chain);
-		Assert.assertNotNull(result);
+        boolean exists = s3Handler.existsKeyInS3(UPLOAD_KEY);
+        assertFalse(exists);
 
-		// Check exists
-		exists = s3Handler.existsKeyInS3(UPLOAD_KEY);
-		assertTrue(exists);
+        File file = FileUtils.getResourceFileFromContext(FILE_TO_UPLOAD);
+        Blob blob = new FileBlob(file);
 
-		// Delete
-		deleteTestFileOnS3();
+        OperationChain chain;
+        OperationContext ctx = new OperationContext(coreSession);
+        ctx.setInput(blob);
+        chain = new OperationChain("testWithDefault");
+        chain.add(S3UploadOp.ID).set("key", UPLOAD_KEY);
+        Blob result = (Blob) automationService.run(ctx, chain);
+        Assert.assertNotNull(result);
 
-	}
+        // Check exists
+        exists = s3Handler.existsKeyInS3(UPLOAD_KEY);
+        assertTrue(exists);
 
-	@Test
-	public void uploadShouldFailWithWrongParameters() throws Exception {
+        // Delete
+        deleteTestFileOnS3();
 
-		Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+    }
 
-		// Delete in case it already exist from an interrupted previous test
-		deleteTestFileOnS3();
+    @Test
+    public void uploadShouldFailWithWrongParameters() throws Exception {
 
-		boolean exists = s3Handler.existsKeyInS3(UPLOAD_KEY);
-		assertFalse(exists);
+        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
 
-		File file = FileUtils.getResourceFileFromContext(FILE_TO_UPLOAD);
-		Blob blob = new FileBlob(file);
+        // Delete in case it already exist from an interrupted previous test
+        deleteTestFileOnS3();
 
-		OperationChain chain;
-		OperationContext ctx = new OperationContext(coreSession);
-		ctx.setInput(blob);
-		chain = new OperationChain("testWithDefault");
-		chain.add(S3UploadOp.ID).set("key", UPLOAD_KEY).set("handlerName", "WRONG_HANDLER_NAME");
-		try {
-			@SuppressWarnings("unused")
-			Blob result = (Blob) automationService.run(ctx, chain);
-			assertTrue("SHould have fail with a wrong S3Handler name", false);
-		} catch (OperationException e) {
-			// All good
-		}
+        boolean exists = s3Handler.existsKeyInS3(UPLOAD_KEY);
+        assertFalse(exists);
 
-	}
+        File file = FileUtils.getResourceFileFromContext(FILE_TO_UPLOAD);
+        Blob blob = new FileBlob(file);
 
-	@Test
-	public void testDownload() throws Exception {
+        OperationChain chain;
+        OperationContext ctx = new OperationContext(coreSession);
+        ctx.setInput(blob);
+        chain = new OperationChain("testWithDefault");
+        chain.add(S3UploadOp.ID).set("key", UPLOAD_KEY).set("handlerName", "WRONG_HANDLER_NAME");
+        try {
+            @SuppressWarnings("unused")
+            Blob result = (Blob) automationService.run(ctx, chain);
+            assertTrue("SHould have fail with a wrong S3Handler name", false);
+        } catch (OperationException e) {
+            // All good
+        }
 
-		Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+    }
 
-		OperationChain chain;
-		OperationContext ctx = new OperationContext(coreSession);
-		chain = new OperationChain("testWithDefault");
-		chain.add(S3DownloadOp.ID).set("key", TEST_FILE_KEY);
-		Blob result = (Blob) automationService.run(ctx, chain);
-		Assert.assertNotNull(result);
+    @Test
+    public void testDownload() throws Exception {
 
-		File f = result.getFile();
-		assertTrue(f.exists());
+        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
 
-		String name = result.getFilename();
-		long size = result.getLength();
-		assertEquals(TEST_FILE_KEY, name);
-		assertEquals(TEST_FILE_SIZE, size);
+        OperationChain chain;
+        OperationContext ctx = new OperationContext(coreSession);
+        chain = new OperationChain("testWithDefault");
+        chain.add(S3DownloadOp.ID).set("key", TEST_FILE_KEY);
+        Blob result = (Blob) automationService.run(ctx, chain);
+        Assert.assertNotNull(result);
 
-	}
+        File f = result.getFile();
+        assertTrue(f.exists());
 
-	@Test
-	public void testKeyExists() throws Exception {
+        String name = result.getFilename();
+        long size = result.getLength();
+        assertEquals(TEST_FILE_KEY, name);
+        assertEquals(TEST_FILE_SIZE, size);
+
+    }
+
+    @Test
+    public void testKeyExists() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
 
@@ -217,7 +225,7 @@ public class TestOperations {
 
         assertTrue((boolean) ctx.get(S3KeyExistsOp.RESULT_CONTEXT_VAR_NAME));
 
-	}
+    }
 
     @Test
     public void testKeyDoesNotExist() throws Exception {
@@ -287,7 +295,7 @@ public class TestOperations {
         assertNull(f);
 
     }
-    
+
     @Test
     public void testGetObjectMetadata() throws Exception {
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
@@ -296,22 +304,22 @@ public class TestOperations {
         OperationContext ctx = new OperationContext(coreSession);
         chain = new OperationChain("testGetObjectMetadata-1");
         chain.add(S3GetObjectMetadataOp.ID).set("key", TEST_FILE_KEY);
-        
+
         Blob result = (Blob) automationService.run(ctx, chain);
         assertNotNull(result);
-        
+
         JSONObject obj = new JSONObject(result.getString());
         String str = obj.getString("Content-Type");
         assertEquals("application/pdf", str);
-        
+
         long length = obj.getLong("Content-Length");
         assertEquals(TEST_FILE_SIZE, length);
-        
+
         str = obj.getString("ETag");
         assertTrue(StringUtils.isNoneBlank(str));
-        
+
     }
-    
+
     @Test
     public void testGetObjectMetadataShouldNotFindKey() throws Exception {
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
@@ -320,12 +328,38 @@ public class TestOperations {
         OperationContext ctx = new OperationContext(coreSession);
         chain = new OperationChain("testGetObjectMetadata-1");
         chain.add(S3GetObjectMetadataOp.ID).set("key", UUID.randomUUID().toString());
-        
+
         Blob result = (Blob) automationService.run(ctx, chain);
-        assertNotNull(result);        
-        
+        assertNotNull(result);
+
         assertEquals("{}", result.getString());
-        
+
+    }
+
+    @Test
+    @Deploy("nuxeo-s3-utils:test-s3-blobprovider.xml")
+    public void shouldCreateBlobFromKey() throws Exception {
+        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+
+        OperationChain chain;
+        OperationContext ctx = new OperationContext(coreSession);
+        chain = new OperationChain("testCreateBlobFromKey-1");
+        chain.add(S3BlobProviderCreateBlobForObjectKeyOp.ID)
+             .set("blobProviderId", "TestS3BlobProvider-XML")
+             .set("objectKey", TEST_FILE_KEY);
+
+        ManagedBlob b = (ManagedBlob) automationService.run(ctx, chain);
+        assertNotNull(b);
+
+        assertEquals(TEST_FILE_KEY, b.getFilename());
+        assertEquals(TEST_FILE_SIZE, b.getLength());
+        assertEquals(TEST_FILE_MIMETYPE, b.getMimeType());
+
+        String expectedKey = BlobKey.buildFullKey("TestS3BlobProvider-XML",
+                SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_AWS_S3_BUCKET),
+                TEST_FILE_KEY);
+        assertEquals(expectedKey, b.getKey());
+
     }
 
 }

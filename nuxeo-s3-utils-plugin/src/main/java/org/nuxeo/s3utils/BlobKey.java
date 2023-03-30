@@ -18,6 +18,8 @@
  */
 package org.nuxeo.s3utils;
 
+import org.apache.commons.lang3.StringUtils;
+import org.nuxeo.ecm.core.api.NuxeoException;
 
 /**
  * Simple class to handle a blob key compatible with S3HandlerBlobProvider
@@ -25,9 +27,8 @@ package org.nuxeo.s3utils;
  * Blob key is {providerId}:{bucketName}:{objectKey}
  * For example: "myProvider:demo-bucket-1:my cool image.jpg"
  * 
- * We do not throw an exception if, in the constructor, we don't find the blobProviderId
- * in the full key, it's up to the caller to handle error (or not) when getBucket() and/or
- * getObjectKey() return null.
+ * Constructor throws an error if the providerId is not found, if the key is not
+ * correctly formatted, etc.
  * 
  * @since 2.1.1
  */
@@ -52,18 +53,53 @@ public class BlobKey {
         return providerId + ":" + bucket + ":" + objectKey;
     }
     
-    BlobKey(String blobProviderId, String fullKey) {
+    /**
+     * Parses and checks the fullKey, throws errors if it is bad formatted.
+     * 
+     * @param blobProviderId
+     * @param fullKey
+     */
+    public BlobKey(String blobProviderId, String fullKey) {
         
-        this.blobProviderId = blobProviderId;
-        parseFullKey(fullKey);
+        if(StringUtils.isBlank(fullKey) || !fullKey.startsWith(blobProviderId)) {
+            throw new NuxeoException(String.format("Blob key (%s) does not match this provider (%s).", fullKey, blobProviderId));
+        }
         
+        String[] parts = fullKey.split(":");
+        if(parts.length != 3) {
+            throw new NuxeoException(String.format("Blob key (%s) is mal formatted. Should be providerId:bucket:objectKey.", fullKey));
+        }
+        
+        bucket = parts[1];
+        objectKey = parts[2];
         if(bucket == null || objectKey == null) {
-            //throw new NuxeoException("Invalid blob key ('" + fullKey + "') for provider " + blobProviderId);
+            throw new NuxeoException(String.format("Blob key (%s) is missing bucket and/or object key.", fullKey));
+        }
+    }
+    
+    /**
+     * Parses and checks the fullKey, also checks the bucket referenced in the key is one expected.
+     * 
+     * Throws an error if the key is badly formatted or its referenced bucket is not the expected one.
+     * 
+     * @param blobProviderId
+     * @param fullKey
+     * @param expectedBucket
+     */
+    BlobKey(String blobProviderId, String fullKey, String expectedBucket) {
+        
+        this(blobProviderId, fullKey);
+        if(!bucket.equals(expectedBucket)) {
+            throw new NuxeoException(String.format("Bucket (%s) in the key (%s) does not match %s", bucket, fullKey, expectedBucket));
         }
     }
     
     public boolean isValid() {
         return bucket!= null && objectKey != null;
+    }
+    
+    public String getProviderId() {
+        return blobProviderId;
     }
     
     public String getBucket() {
@@ -76,19 +112,6 @@ public class BlobKey {
     
     public String buildFullKey(String objectKey) {
         return blobProviderId + ":" + bucket + ":" + objectKey;
-    }
-    
-    protected void parseFullKey(String fullKey) {
-        
-        int colon = fullKey.indexOf(':');
-        if (colon >= 0 && fullKey.substring(0, colon).equals(blobProviderId)) {
-            String tmp = fullKey.substring(colon + 1);
-            colon = tmp.indexOf(':');
-            if(colon >= 0) {
-                bucket = tmp.substring(0, colon);
-                objectKey = tmp.substring(colon + 1);
-            }
-        }
     }
 
 }

@@ -32,6 +32,7 @@ import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.s3utils.S3Handler;
 
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
@@ -68,7 +69,12 @@ public class S3GetObjectMetadataOp {
             handlerName = org.nuxeo.s3utils.Constants.DEFAULT_HANDLER_NAME;
         }
         S3Handler s3Handler = S3Handler.getS3Handler(handlerName);
-        JsonNode json = s3Handler.getObjectMetadata(key);
+        JsonNode json = null;
+        try {
+            json = s3Handler.getObjectMetadataJson(key);
+        } catch (NuxeoException e) {
+            //Ignore
+        }
         if(json == null) {
            return Blobs.createJSONBlob("{}");
         }

@@ -7,10 +7,11 @@
       <property name="preventUserUpdate">true</property>
       <!--  All other properties: default values -->
       <!--
-      <property name="cachesize"></property>
-      <property name="cachecount"></property>
-      <property name="cacheminage"></property>
-      <property name="s3handler"></property>
+      <property name="cacheSize"></property>
+      <property name="cacheSount"></property>
+      <property name="cacheMinAge"></property>
+      <property name="s3Handler"></property>
+      <property name="noDefaultDownloadAbove"></property>
       -->
     </blobprovider>
   </extension>

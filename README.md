@@ -1,27 +1,33 @@
 # nuxeo-s3-utils
 
 
-This add-on for [Nuxeo](http://www.nuxeo.com) contains utilities for AWS S3: Operations to upload or download a file, utilities to build a temporary signed URL to S3, and a helper SEAM Bean.
+This add-on for [Nuxeo](http://www.nuxeo.com) contains utilities for accessing objects in AWS S3 bucket(s):
+
+* *Operations* to upload or download a file, generate a temporary signed URL, etc.
+* *Custom blob provider* to handle objects on buckets that are not the Nuxeo binary bucket. They still get indexed, thumbnail calculated etc. Some important restriction though: The goal is to handle existing files in the bucket(s), so upload (update/creation) is not allowed. See below for details
 
 ## Set Up: Configuration
 ### Principles and Authentication
-The plugin creates a `S3Handler` tool, that is in charge of performing the actions (download, upload, ...). It connects to S3 using your credentials, a region and a bucket.
+The plugin creates:
+
+* A `S3Handler` tool, that is in charge of performing the actions (download, upload, ...).
+* A `S3UtilsBlobProvider` that can be used to handle Blobs linked to an object in a S3 bucket. This BlobProvider uses a `S3Handler` for actions on the bucket. To link a Blob in Nuxeo to an object in your bucket, you will use the `S3Utils.CreateBlobFromObjectKey` operation (see below)
+
+Both connects to S3 using your credentials, a region and a bucket. In order to allow connecting to several to several buckets (within the same account), the plugin exposes a _service_, allowing you to access different buckets: You contribute as many S3 Handlers (and possibly several `S3UtilsBlobProvider`) as you need, given each of them a unique name.
 
 The plugin uses Nuxeo AWS Credential code to handle authentication (the `NuxeoAWSCredentialsProvider` class), which means you must either:
 
 * Use nuxeo configuration parameters/XML extension point to set up your AWS credentials (see https://doc.nuxeo.com/nxdoc/amazon-s3-online-storage/)
-* Be already authenticated and/or you have setup the expected AWS environment variables.
+* Be already authenticated and/or you have setup the expected AWS environment variables before starting Nuxeo (or running the unit tests). This would be the case if, for example, Nuxeo is running from an EC2 instance on AWS (and this instance has permission to access the bucket(s))
 
 For example, on way to run unit tests is to: (in a terminal):
 
 * Authenticate to AWS (like, run `aws s3 ls` and authenticate)
 * Then, run `mvn install`
 
-I Nuxeo is deployed on an EC2 instance on AWS, it automatically gets the authentication and role from the instance.
+If Nuxeo is deployed on an EC2 instance on AWS, it automatically gets the authentication and role from the instance.
 
-In order to allow connecting to several to several buckets (within the same account, as you already are authenticated to this account, the plugin exposes a _service_, allowing you to access different buckets: You contribute as many S3 Handlers as you need, given each of them a unique name.
-
-**IMPORTANT**: Of course, authentication drives permission, you must make sure the account use (or the EC2 instance running) has permission to download, upload, delete, ... in the bucket.
+**IMPORTANT**: Of course, authentication drives permission, you must make sure the account (or the EC2 instance running) has permission to download, upload, delete, ... in the bucket.
 
 ### Contribute the S3Utils Service
 Fo each S3 account and bucket you want to access, just add the following contribution to your Nuxeo Studio project (Advanced Settings > XML Extension). Values are explain below.
@@ -39,7 +45,7 @@ Fo each S3 account and bucket you want to access, just add the following contrib
     <!-- REQUIRED
          Multipart upload is always possible.
          These values must be set and not empty. Set it to 0
-         if you want to use the default values -->
+         if you want to use the default AWS values -->
     <minimumUploadPartSize>0</minimumUploadPartSize>
     <multipartUploadThreshold>0</multipartUploadThreshold>
   </s3Handler>
@@ -52,7 +58,7 @@ Replace the values with yours:
 * `region`: Required.
   * The region (always required, even if buckets are global)
   * If this property is empty, the plugin reads the region from:
-    * The `nuxeo.aws.s3utils.region` configiration parameter
+    * The `nuxeo.aws.s3utils.region` configuration parameter
     * If empty, reads from Nuxeo AWS configuration
     * If still empty, reads from the `nuxeo.aws.region` confifguration parameter
 * `bucket`: Required. The bucket to use for this S3 account.
@@ -71,7 +77,7 @@ Replace the values with yours:
   * The default values suit most of cases, but if you network allows for different settings and better performance, you can change the values.
 
 ### Use `nuxeo.conf`
-It may be interesting to read the value from `nuxeo.conf`. This way, you can deploy the same Studio projet in different environments (typically Dev/Test/Prod), each of them using a different set of regions and buckets.
+It may be interesting to read the value from `nuxeo.conf`. This way, you can deploy the same Studio project in different environments (typically Dev/Test/Prod), each of them using a different set of regions and buckets.
 
 For this purpose:
 
@@ -166,6 +172,9 @@ Now, we can use the "S3-Bucket-one" or the "S3-Bucket-Two" handlers.
 * See below: You must pass the correct handler name to the mmisc. operation you will be using.
 
 ## Features
+* Operation
+* Blob Provider
+
 ### Operations
 The plugin contributes the following operations to be used in an Automation Chain.
 
@@ -179,7 +188,7 @@ The plugin contributes the following operations to be used in an Automation Chai
     * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
     * `key`: The key to use for S3 storage
     * `xpath`: When the input is `Document`, the field to use. Default value is the main blob, `file:content`.
-  * *Notice* Upload uses Amazon `TransferManager`and will perform multipart uploads depending on the values set in the configuration (`minimumUploadPartSize`  and `multipartUploadThreshold`). See explanations above.
+  * *Notice* Upload uses Amazon `TransferManager` and will perform multipart uploads depending on the values set in the configuration (`minimumUploadPartSize`  and `multipartUploadThreshold`). See explanations above.
 
 
 * **Files > S3 Utils: Download** (ID: `S3Utils.Download`)
@@ -188,6 +197,7 @@ The plugin contributes the following operations to be used in an Automation Chai
     * `handlerName`: The name of the S3Handler to use (see examples above)
     * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
     * `key`: The key of the file on S3
+  * *Notice* Download uses Amazon `TransferManager` and will perform multipart downloads when possible.
 
 
 * **Files > S3 Utils: Delete** (ID: `S3Utils.Delete`)
@@ -231,6 +241,18 @@ The plugin contributes the following operations to be used in an Automation Chai
     * Plus some other properties: `bucket`, `key` and `userMetadata`, which is a Json object (can be empty) holding all the user metadata for the object.
   * Notice: When a metadata is not set, it is not returned by AWS (for example, Content-Encoding, of md5 are not always there)
 
+* **Files > S3 Utils: S3 Utils: Create Blob from Object Key** (ID: `S3Utils.CreateBlobFromObjectKey`)
+  * Input is `void`, returns `blob`
+  * Returns a Blob holding the reference to the remote S3 object. This blob can then be stored in any blob field of a document (typically `file:content`)
+  * Parameters:
+    * `blobProviderId`: required, the BlobProvider ID, as contributed via XML (see an example below, _The S3Utils Blob Provider_)
+    * `objectKey`: Required, the key of the object in the S3 bucket.
+  * Notice you don't specify a bucket. The operation reads the bucket from the `S3Handler` linked to the BlobProvider (see below _The S3Utils Blob Provider_).
+
+  
+  
+  
+
 #### How to Import these Operations in your Project?
 The principles are:
 
@@ -238,6 +260,8 @@ The principles are:
 * Add it to the "Operations Registry" in Studio
 
 You can find an example here: https://doc.nuxeo.com/nxdoc/how-to-use-pdf-conversion-operations-with-studio/.
+
+Or you can use [Nuxeo CLI](https://doc.nuxeo.com/nxdoc/nuxeo-cli/) for this purpose, it can create the registry entries for you.
 
 #### How to Tune the REST Filtering
 The opérations that are filtered for REST calls and restricted to administrators are listed in the `s3-utils-operations.xml` file. We are using the recommended mechanism for the filtering, as described [here](https://doc.nuxeo.com/nxdoc/filtering-exposed-operations/), and the `s3-utils-operations.xml` contains the following:
@@ -258,6 +282,49 @@ This contribution makes sure these single operations, when called via REST, can 
 
 * Override them in a Studio XML extension
 * Use them in an Automation Chain that you call from REST
+
+### The S3Utils Blob Provider
+
+The goal of this blob provider is to allow for handling blobs that are not stored by Nuxeo BinaryManager. This way, you can have a Nuxeo document and store, in file:content for example a blob that actually points to your custom bucket. It will then be transparent for the user: Nuxeo will get a thumbnail from it, extract full text and index it etc. For this purpose, it will have, of course, to download the file from S3 (it is then saved to a local, temporary, file cache).
+
+You can (see below) tune the provider so it does not download files bigger than a threshold (imagine you have a 200GB file: downloading it for a thumbnail, fulltext indexing, etc. could be complex and would certainly requires extra storage (for temp. files), extra i/o, configuration and timeout, etc.)
+
+#### Limitations
+
+* **No write**
+  * For now, the provider does not allow to upload a blob to you s3 bucket (no new file, no update)
+* **No automatically update form the S3 files**: If a file is modified on s3, it is not updated in Nuxeo (no new thumbnail calculated, no fulltext index recalculated, …)
+
+
+#### Usage
+
+To use the provider, you must just contribute the BlobManager as in the following example:
+
+```
+<extension target="org.nuxeo.ecm.core.blob.BlobManager" point="configuration">
+  <blobprovider name="TestS3BlobProvider-XML">
+    <class>org.nuxeo.s3utils.S3UtilsBlobProvider</class>
+    <!-- Here are the default values if you don't set the properties -->
+    <property name="cacheSize">100 MB</property>
+    <property name="cacheCount">10000</property>
+    <property name="cacheMinAge">3600</property>
+    <property name="s3Handler">default</property>
+    <property name="noDefaultDownloadAbove">0</property>
+  </blobprovider>
+  </extension>
+```
+
+* `class` is required and must be exactly `org.nuxeo.s3utils.S3UtilsBlobProvider`
+* `cacheSize`, `cacheCount` and `cacheMinAge`: Optional. Handle the file cache, so when a file is downloaded from s3, it is cached, so if it is required later, it is already there.
+  * The cache is a LRU cache (Least Recent Update cache), and default values are "100 MB" for `cacheSize`, "10000" for `cacheCount`, and one hour ("3600") for `cacheMinAge`
+* `s3Handler`: optional. The name of the related `S3Handler`. It will be used to get the bucket and authentication etc. Not passed => use the default handler.
+* `noDefaultDownloadAbove`: Optional.
+  * A number, in bytes, above which the action of downloading the blob will actually not download it, but download a place holder instead, containing just the basic info (file name, file size, mime type). These infos will be returned in a blob, trying to match the mime-ype of the original object, but it can't obviously be always relevant. Handled mime types are text/plain, application/pdf and image/jpeg-png.
+  * So, **warning**:
+    * thumbnail and full text index will of course not reflect the content of the distant file
+    * Errors could occur in the log when Nuxeo tries to get a thumbnail/extract fulltext
+  * The main goal of this parameter is to handle big files on S3, to avoid downloading them locally for handling of thumbnails and renditions.
+  * Notice you can always handle the thumbnail yourself (Add the `Thumbnail` facet and set an image to `thumb:thumb`for example), the preview (tune your nuxeo-yourdoc-view-layout to display something relevant, etc.
 
 
 ### Temporary Signed URL
@@ -311,7 +378,7 @@ These solutions are provided for inspiration and we encourage customers to use t
 This is a moving project (no API maintenance, no deprecation process, etc.) If any of these solutions are found to be useful for the Nuxeo Platform in general, they will be integrated directly into platform, not maintained here.
 
 ## About Nuxeo
-Nuxeo Platform is an open source Content Services platform, written in Java. Data can be stored in both SQL & NoSQL databases.
+Nuxeo Platform is an open source Content Services platform, written in Java and provided by Hyland. Data can be stored in both SQL & NoSQL databases.
 
 The development of the Nuxeo Platform is mostly done by Nuxeo employees with an open development model.
 
@@ -319,4 +386,4 @@ The source code, documentation, roadmap, issue tracker, testing, benchmarks are 
 
 Typically, Nuxeo users build different types of information management solutions for [document management](https://www.nuxeo.com/solutions/document-management/), [case management](https://www.nuxeo.com/solutions/case-management/), and [digital asset management](https://www.nuxeo.com/solutions/dam-digital-asset-management/), use cases. It uses schema-flexible metadata & content models that allows content to be repurposed to fulfill future use cases.
 
-More information is available at [www.nuxeo.com](https://www.nuxeo.com).
+More information is available at [www.hyland.copm](https://www.hyland.com).

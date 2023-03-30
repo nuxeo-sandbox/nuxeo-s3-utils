@@ -135,7 +135,7 @@ public class TestS3Handler {
     public void testObjectMetadata() throws Exception {
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
         
-        JsonNode json = s3Handler.getObjectMetadata(TEST_FILE_KEY);
+        JsonNode json = s3Handler.getObjectMetadataJson(TEST_FILE_KEY);
         assertNotNull(json);
                 
         JsonNode part = json.get("Content-Length");

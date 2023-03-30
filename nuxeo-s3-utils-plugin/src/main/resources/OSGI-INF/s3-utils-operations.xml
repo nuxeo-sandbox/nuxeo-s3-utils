@@ -7,6 +7,7 @@
     <operation class="org.nuxeo.s3utils.operations.S3KeyExistsOp" />
     <operation class="org.nuxeo.s3utils.operations.S3TempSignedUrlOp" />
     <operation class="org.nuxeo.s3utils.operations.S3GetObjectMetadataOp" />
+    <operation class="org.nuxeo.s3utils.operations.S3BlobProviderCreateBlobForObjectKeyOp" />
   </extension>
 
   <!-- By default, limit some operations to administrators -->

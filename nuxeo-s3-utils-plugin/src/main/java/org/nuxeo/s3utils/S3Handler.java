@@ -28,6 +28,7 @@ import org.nuxeo.runtime.api.Framework;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -215,6 +216,16 @@ public interface S3Handler {
      * @since 8.2
      */
     public boolean existsKey(String bucket, String inKey);
+    
+    /**
+     * Gets the object metadata without fetching the object itself,
+     * as returned by AWS SDK
+     * 
+     * @param inKey
+     * @return
+     * @since TODO
+     */
+    public ObjectMetadata getObjectMetadata(String inKey);
 
     /**
      * Gets the object metadata without fetching the object itself.
@@ -233,7 +244,7 @@ public interface S3Handler {
      * @throws JsonProcessingException
      * @since 2.0
      */
-    public JsonNode getObjectMetadata(String inKey) throws JsonProcessingException;
+    public JsonNode getObjectMetadataJson(String inKey) throws JsonProcessingException;
 
     /**
      * Return the current bucket

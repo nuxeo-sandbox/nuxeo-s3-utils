@@ -347,17 +347,22 @@ public class S3HandlerImpl implements S3Handler {
     }
     
     @Override
-    public JsonNode getObjectMetadata(String inKey) throws JsonProcessingException {
-        
+    public ObjectMetadata getObjectMetadata(String inKey) {
+                
         ObjectMetadata metadata;
         try {
             metadata = s3.getObjectMetadata(currentBucket, inKey);
         } catch(AmazonS3Exception e) {
-            if(e.getErrorMessage().toLowerCase().equals("not found")) {
-                return null;
-            }
-            throw new NuxeoException(String.format("Could not get key %s in AWS bucket %s", inKey, currentBucket),e);
+            throw new NuxeoException(String.format("An error occured while getting key %s in AWS bucket %s", inKey, currentBucket), e);
         }
+        
+        return metadata;
+    }
+    
+    @Override
+    public JsonNode getObjectMetadataJson(String inKey) throws JsonProcessingException {
+        
+        ObjectMetadata metadata = getObjectMetadata(inKey);
         
         Map<String, Object> metadataMap = metadata.getRawMetadata();
         Map<String, Object> mutableMap = new HashMap<String, Object>(metadataMap);
