@@ -112,6 +112,7 @@ public class TestS3UtilsBlobProvider {
     public void testGetBlob() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
 
         // Build a provider (not from XML)
         S3UtilsBlobProvider blobProvider = new S3UtilsBlobProvider();
@@ -137,6 +138,7 @@ public class TestS3UtilsBlobProvider {
     public void testGetBlobWithDownloadThreshold() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
 
         // Build a provider (not from XML) with a download threshold
         S3UtilsBlobProvider blobProvider = new S3UtilsBlobProvider();
@@ -168,6 +170,7 @@ public class TestS3UtilsBlobProvider {
     public void testGetBlobImageWithDownloadThreshold() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
 
         // Sorry, giving up, I can't make the "pdf2image" converter to deploy, it sometimes fails. But in live test,
         // it's working. So just checking it's availability.
@@ -220,6 +223,7 @@ public class TestS3UtilsBlobProvider {
     public void testGetBlobWithXmlConfig() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
 
         S3UtilsBlobProvider blobProvider = (S3UtilsBlobProvider) blobManager.getBlobProvider("TestS3BlobProvider-XML");
         assertNotNull(blobProvider);
@@ -242,6 +246,7 @@ public class TestS3UtilsBlobProvider {
     public void shouldCreateBlobFromKey() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
 
         S3UtilsBlobProvider blobProvider = (S3UtilsBlobProvider) blobManager.getBlobProvider("TestS3BlobProvider-XML");
         assertNotNull(blobProvider);

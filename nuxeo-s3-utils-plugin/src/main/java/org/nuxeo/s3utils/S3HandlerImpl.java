@@ -105,10 +105,6 @@ public class S3HandlerImpl implements S3Handler {
         
         minimumUploadPartSize = desc.getMinimumUploadPartSize();
         multipartUploadThreshold = desc.getMultipartUploadThreshold();
-        
-        TransferManagerConfiguration conf = new TransferManagerConfiguration();
-        conf.getMinimumUploadPartSize();
-        conf.getMultipartUploadThreshold();
 
         setup(desc);
     }

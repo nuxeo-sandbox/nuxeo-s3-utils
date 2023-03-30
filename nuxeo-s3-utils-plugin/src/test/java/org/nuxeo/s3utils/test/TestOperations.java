@@ -121,7 +121,7 @@ public class TestOperations {
 
     protected void deleteTestFileOnS3() {
 
-        if (StringUtils.isNotBlank(UPLOAD_KEY)) {
+        if (StringUtils.isNotBlank(UPLOAD_KEY) && TestUtils.awsCredentialsLookOk()) {
             try {
                 s3Handler.deleteFile(UPLOAD_KEY);
             } catch (Exception e) {
@@ -134,6 +134,7 @@ public class TestOperations {
     public void testUpload() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
 
         // Delete in case it already exist from an interrupted previous test
         deleteTestFileOnS3();
@@ -165,6 +166,7 @@ public class TestOperations {
     public void uploadShouldFailWithWrongParameters() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
 
         // Delete in case it already exist from an interrupted previous test
         deleteTestFileOnS3();
@@ -194,6 +196,7 @@ public class TestOperations {
     public void testDownload() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
 
         OperationChain chain;
         OperationContext ctx = new OperationContext(coreSession);
@@ -216,6 +219,7 @@ public class TestOperations {
     public void testKeyExists() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
 
         OperationChain chain;
         OperationContext ctx = new OperationContext(coreSession);
@@ -231,6 +235,7 @@ public class TestOperations {
     public void testKeyDoesNotExist() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
 
         String invalid = UUID.randomUUID().toString().replace("-", "") + ".pdf";
 
@@ -248,6 +253,7 @@ public class TestOperations {
     public void testTempSignedUrl() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
 
         OperationChain chain;
         OperationContext ctx = new OperationContext(coreSession);
@@ -275,6 +281,7 @@ public class TestOperations {
     public void testTempSignedUrShouldFaill() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
 
         int duration = 2; // 2 seconds
 
@@ -299,6 +306,7 @@ public class TestOperations {
     @Test
     public void testGetObjectMetadata() throws Exception {
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
 
         OperationChain chain;
         OperationContext ctx = new OperationContext(coreSession);
@@ -323,6 +331,7 @@ public class TestOperations {
     @Test
     public void testGetObjectMetadataShouldNotFindKey() throws Exception {
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
 
         OperationChain chain;
         OperationContext ctx = new OperationContext(coreSession);
@@ -339,8 +348,10 @@ public class TestOperations {
     @Test
     @Deploy("nuxeo-s3-utils:test-s3-blobprovider.xml")
     public void shouldCreateBlobFromKey() throws Exception {
+        
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
+        
         OperationChain chain;
         OperationContext ctx = new OperationContext(coreSession);
         chain = new OperationChain("testCreateBlobFromKey-1");

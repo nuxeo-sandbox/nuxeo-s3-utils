@@ -26,10 +26,53 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 import org.apache.commons.lang3.StringUtils;
+import org.nuxeo.s3utils.Constants;
+import org.nuxeo.s3utils.S3Handler;
+
+import com.amazonaws.SdkClientException;
 
 public class TestUtils {
 
-    /*
+    public static int credentialsLookOk = -1;
+
+    /**
+     * We return fails only if we get an error related to credentials while trying to connect to an s3 bucket.
+     * In all other cases we return true.
+     * 
+     * @return
+     * @since TODO
+     */
+    public static boolean awsCredentialsLookOk() {
+
+        if (credentialsLookOk == -1) {
+            
+            credentialsLookOk = 1;
+            if (SimpleFeatureCustom.hasLocalTestConfiguration()) {
+                String bucket = (String) SimpleFeatureCustom.getLocalProperty(
+                        SimpleFeatureCustom.TEST_CONF_KEY_NAME_AWS_S3_BUCKET);
+                S3Handler s3Handler = S3Handler.getS3Handler(Constants.DEFAULT_HANDLER_NAME);
+
+                try {
+                    // We don't care if the bucket does not exist, we check only credentials
+                    s3Handler.getS3().doesBucketExistV2(bucket);
+                } catch (SdkClientException e) {
+                    if (e.getMessage()
+                         .toLowerCase()
+                         .startsWith("Unable to load AWS credentials from any provider in the chain")) {
+                        credentialsLookOk = 0;
+                    }
+                }
+            } else {
+                System.out.println("The local '" + SimpleFeatureCustom.TEST_CONF_FILE
+                        + "' configuration file is missing: Cannot check AWS connection ");
+            }
+        }
+        
+        return credentialsLookOk == 0;
+
+    }
+
+    /**
      * The returned file is a temp file. Still, caller should delete it once done dealing with it
      */
     public static File downloadFile(String url) throws IOException {
@@ -58,7 +101,7 @@ public class TestUtils {
                 // extracts file name from URL
                 fileName = url.substring(url.lastIndexOf("/") + 1, url.length());
                 int idx = fileName.indexOf("?");
-                if(idx > -1) {
+                if (idx > -1) {
                     fileName = fileName.substring(0, idx);
                 }
             }

@@ -21,6 +21,7 @@ package org.nuxeo.s3utils.test;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.MissingResourceException;
 import java.util.Properties;
 
 import org.nuxeo.common.utils.FileUtils;
@@ -28,6 +29,9 @@ import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.runtime.test.runner.RunnerFeature;
 import org.nuxeo.s3utils.Constants;
+import org.nuxeo.s3utils.S3Handler;
+
+import com.amazonaws.SdkClientException;
 
 /**
  * We don't want to hard code the bucket name or the distant object key, since
