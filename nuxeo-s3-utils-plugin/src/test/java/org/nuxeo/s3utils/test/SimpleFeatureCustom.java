@@ -60,17 +60,28 @@ import com.amazonaws.SdkClientException;
  *
  * <pre>
  * {@code
- * #User: TestForPlugins
- * test.aws.region=eu-west-1
- * test.aws.s3.bucket=eu-west-1-demo-bucket
+ * test.aws.region=the-region
+ * test.aws.s3.bucket=the-bucket
  * test.use.cache=true
- * #These files must exist in this bucket
+ * 
+ * #This file exists in this bucket
  * test.object.key=used-in-unit-test-do-not-change.pdf
  * test.object.size=135377
  * test.object.mimetype=application/pdf
  * test.image.key=used-in-unit-test-do-not-change.jpg
  * test.image.size=879394
  * test.image.mimetype=image/jpeg
+ * 
+ * # This file is for the test of the SequenceInputStream
+ * # 11.1MB, chunck of 1MB
+ * test.bigobject.key=used-in-unit-test-do-not-change-big.txt
+ * test.bigobject.size=10264037
+ * test.bigobject.mimetype=text/plain
+ * test.bigobject.pieceSize=1048576
+ * test.bigobject.readbytes.start=5000000
+ * test.bigobject.readbytes.len=22
+ * test.bigobject.readbytes.value=HERE-THE_CHARS-TO-FIND
+ * 
  * # For upload
  * test.upload.file.key=Brief.pdf
  * }
@@ -106,7 +117,21 @@ public class SimpleFeatureCustom implements RunnerFeature {
 
     public static final String TEST_CONF_KEY_NAME_IMAGE_MIMETYPE = "test.image.mimetype";
 
-	public static final String TEST_CONF_KEY_NAME_UPLOAD_FILE_KEY = "test.upload.file.key";
+    public static final String TEST_CONF_KEY_NAME_BIGOBJECT_KEY = "test.bigobject.key";
+
+    public static final String TEST_CONF_KEY_NAME_BIGOBJECT_SIZE = "test.bigobject.size";
+
+    public static final String TEST_CONF_KEY_NAME_BIGOBJECT_MIMETYPE = "test.bigobject.mimetype";
+
+    public static final String TEST_CONF_KEY_NAME_BIGOBJECT_PIECE_SIZE = "test.bigobject.pieceSize";
+    
+    public static final String TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_START = "test.bigobject.readbytes.start";
+    
+    public static final String TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_LEN = "test.bigobject.readbytes.len";
+    
+    public static final String TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_VALUE = "test.bigobject.readbytes.value";
+
+    public static final String TEST_CONF_KEY_NAME_UPLOAD_FILE_KEY = "test.upload.file.key";
 	
 	protected static Properties props = null;
 
@@ -152,8 +177,23 @@ public class SimpleFeatureCustom implements RunnerFeature {
             addEnvironmentVariable(TEST_CONF_KEY_NAME_AWS_REGION);
 			addEnvironmentVariable(TEST_CONF_KEY_NAME_AWS_S3_BUCKET);
 			addEnvironmentVariable(TEST_CONF_KEY_NAME_USE_CACHE);
+			
 			addEnvironmentVariable(TEST_CONF_KEY_NAME_OBJECT_KEY);
 			addEnvironmentVariable(TEST_CONF_KEY_NAME_OBJECT_SIZE);
+            addEnvironmentVariable(TEST_CONF_KEY_NAME_OBJECT_MIMETYPE);
+            
+            addEnvironmentVariable(TEST_CONF_KEY_NAME_IMAGE_KEY);
+            addEnvironmentVariable(TEST_CONF_KEY_NAME_IMAGE_SIZE);
+            addEnvironmentVariable(TEST_CONF_KEY_NAME_IMAGE_MIMETYPE);
+            
+            addEnvironmentVariable(TEST_CONF_KEY_NAME_BIGOBJECT_KEY);
+            addEnvironmentVariable(TEST_CONF_KEY_NAME_BIGOBJECT_SIZE);
+            addEnvironmentVariable(TEST_CONF_KEY_NAME_BIGOBJECT_MIMETYPE);
+            addEnvironmentVariable(TEST_CONF_KEY_NAME_BIGOBJECT_PIECE_SIZE);
+            addEnvironmentVariable(TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_START);
+            addEnvironmentVariable(TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_LEN);
+            addEnvironmentVariable(TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_VALUE);
+            
 			addEnvironmentVariable(TEST_CONF_KEY_NAME_UPLOAD_FILE_KEY);
 		}
 

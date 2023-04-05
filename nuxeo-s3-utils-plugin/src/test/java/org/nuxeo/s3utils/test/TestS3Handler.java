@@ -20,8 +20,11 @@
 package org.nuxeo.s3utils.test;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
+import java.io.InputStream;
+import java.io.SequenceInputStream;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
@@ -38,6 +41,7 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.s3utils.CacheForKeyExists;
 import org.nuxeo.s3utils.Constants;
 import org.nuxeo.s3utils.S3Handler;
+import org.nuxeo.s3utils.S3ObjectSequentialStream;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -215,6 +219,67 @@ public class TestS3Handler {
         isInCache = cache.isInCache(TEST_FILE_KEY);
         assertFalse(isInCache);
 
+    }
+    
+    @Test
+    public void testBigObjectStream() throws Exception {
+
+        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
+        
+        String key = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_KEY);
+        String sizeStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_SIZE);
+        String pieceSizeStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_PIECE_SIZE);
+        Assume.assumeTrue("No big object info in the configuration file", !StringUtils.isAnyBlank(key, sizeStr, pieceSizeStr));
+
+        long pieceSize = Long.parseLong(pieceSizeStr);
+        SequenceInputStream stream = s3Handler.getInputStream(key, pieceSize);
+        assertNotNull(stream);
+        
+        // Here we just check we have all the good amount
+        long expectedSize = Long.parseLong(sizeStr);
+        long size = 0;
+        long bytesLength;
+        // Let's read "big" chunks
+        int buffer = 500 * 1024;
+        // Must be < pieceSize though
+        if(pieceSize > 0 && buffer >= pieceSize) {
+            buffer = (int) (pieceSize / 2);
+        }
+        do {
+            byte bytes[] = stream.readNBytes(buffer);
+            bytesLength = bytes.length;
+            size += bytesLength;
+        } while (bytesLength > 0);
+        assertEquals(expectedSize, size);
+                
+    }
+    
+    /*
+     * Check your aws-test-conf file, all is configured there
+     */
+    @Test
+    public void testReadBytes() throws Exception {
+        
+        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
+        
+        String key = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_KEY);
+        String startStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_START);
+        String lenStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_LEN);
+        String expectedValue = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_VALUE);
+        Assume.assumeTrue("No big object info in the configuration file", !StringUtils.isAnyBlank(key, startStr, lenStr, expectedValue));
+
+        long start = Long.parseLong(startStr);
+        long len = Long.parseLong(lenStr);
+        
+        byte[] bytes = s3Handler.readBytes(key, start, len);
+        // Our test file is a pure text, change this unit test if it's different for you
+        assertEquals(len, bytes.length);
+        
+        String resultStr = new String(bytes);
+        assertEquals(expectedValue, resultStr);
+        
     }
 
 }

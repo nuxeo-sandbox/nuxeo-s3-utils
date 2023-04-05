@@ -68,7 +68,7 @@ public class TestUtils {
             }
         }
         
-        return credentialsLookOk == 0;
+        return credentialsLookOk == 1;
 
     }
 

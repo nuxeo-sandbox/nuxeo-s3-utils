@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.SequenceInputStream;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -69,6 +70,11 @@ import com.google.inject.Inject;
  * - The filecache use S3 ETag as key
  * - Objects will be fetched only in the bucket handled by the related S3Handler
  * - See below explanation about "noDefaultDownloadAbove"
+ * - It is possible to get a stream (a SequenceInputStream) from the distant object. This can be useful to avoid
+ * downloading and storing the file when it is big and you don't actually need the file. See
+ * S3UtilsBlobProvider#getInputStream
+ * - It is also possible get a byte range directly from the S3 object (no need to download it all), see
+ * S3UtilsBlobProvider#getBytes
  * <p>
  * </p>
  * <b>noDefaultDownloadAbove</b>:
@@ -167,6 +173,25 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
     public InputStream getStream(ManagedBlob blob) throws IOException {
         File cachedFile = getFileFromCache(blob);
         return new FileInputStream(cachedFile);
+    }
+
+    public SequenceInputStream getInputStream(ManagedBlob blob) throws IOException {
+
+        BlobKey blobKey = new BlobKey(blobProviderId, blob.getKey(), s3Handler.getBucket());
+        String objectKey = blobKey.getObjectKey();
+
+        SequenceInputStream stream = s3Handler.getInputStream(objectKey, 0);
+
+        return stream;
+    }
+    
+    public byte[] readBytes(ManagedBlob blob, long start, long len) throws IOException {
+
+        BlobKey blobKey = new BlobKey(blobProviderId, blob.getKey(), s3Handler.getBucket());
+        String objectKey = blobKey.getObjectKey();
+        
+        return s3Handler.readBytes(objectKey, start, len);
+        
     }
 
     @Override

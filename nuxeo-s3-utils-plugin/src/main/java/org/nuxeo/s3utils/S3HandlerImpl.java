@@ -20,6 +20,8 @@ package org.nuxeo.s3utils;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.SequenceInputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -46,16 +48,14 @@ import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.amazonaws.services.s3.transfer.Download;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
-import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import org.nuxeo.runtime.aws.NuxeoAWSCredentialsProvider;
 
@@ -65,11 +65,11 @@ import org.nuxeo.runtime.aws.NuxeoAWSCredentialsProvider;
  * @since 8.1
  */
 public class S3HandlerImpl implements S3Handler {
-    
+
     protected static final Log log = LogFactory.getLog(S3HandlerImpl.class);
 
     protected String name;
-    
+
     protected String region;
 
     protected String currentBucket;
@@ -79,13 +79,13 @@ public class S3HandlerImpl implements S3Handler {
     protected boolean useCacheForExistsKey;
 
     protected AmazonS3 s3;
-    
+
     protected TransferManager transferManager;
 
     protected CacheForKeyExists keyExistsCache = null;
-    
+
     protected long minimumUploadPartSize;
-    
+
     long multipartUploadThreshold;
 
     /**
@@ -102,7 +102,7 @@ public class S3HandlerImpl implements S3Handler {
         currentBucket = desc.getBucket();
         signedUrlDuration = desc.getTempSignedUrlDuration();
         useCacheForExistsKey = desc.useCacheForExistsKey();
-        
+
         minimumUploadPartSize = desc.getMinimumUploadPartSize();
         multipartUploadThreshold = desc.getMultipartUploadThreshold();
 
@@ -110,26 +110,27 @@ public class S3HandlerImpl implements S3Handler {
     }
 
     protected void setup(S3HandlerDescriptor desc) {
-        
+
         AWSCredentialsProvider awsCredentialsProvider = NuxeoAWSCredentialsProvider.getInstance();
         s3 = AmazonS3ClientBuilder.standard()
                                   .withCredentials(awsCredentialsProvider)
-                                  //.withClientConfiguration(HERE SOME CONFIG?)
+                                  // .withClientConfiguration(HERE SOME CONFIG?)
                                   .withRegion(region)
                                   .build();
-        
+
         transferManager = TransferManagerBuilder.standard()
                                                 .withS3Client(s3)
                                                 .withMinimumUploadPartSize(minimumUploadPartSize)
                                                 .withMultipartUploadThreshold(multipartUploadThreshold)
                                                 /*
-                                                .withMultipartCopyThreshold(Long.valueOf(getLongProperty(
-                                                        MULTIPART_COPY_THRESHOLD_PROPERTY, MULTIPART_COPY_THRESHOLD_DEFAULT)))
-                                                .withMultipartCopyPartSize(Long.valueOf(getMultipartCopyPartSize()))
-                                                */
+                                                 * .withMultipartCopyThreshold(Long.valueOf(getLongProperty(
+                                                 * MULTIPART_COPY_THRESHOLD_PROPERTY,
+                                                 * MULTIPART_COPY_THRESHOLD_DEFAULT)))
+                                                 * .withMultipartCopyPartSize(Long.valueOf(getMultipartCopyPartSize()))
+                                                 */
                                                 .withAlwaysCalculateMultipartMd5(true)
                                                 .build();
-        
+
         if (useCacheForExistsKey) {
             keyExistsCache = new CacheForKeyExists(this);
         }
@@ -149,7 +150,7 @@ public class S3HandlerImpl implements S3Handler {
 
         boolean ok = false;
         try {
-            //s3.putObject(new PutObjectRequest(currentBucket, inKey, inFile));
+            // s3.putObject(new PutObjectRequest(currentBucket, inKey, inFile));
 
             Upload upload = transferManager.upload(currentBucket, inKey, inFile);
             // Be synchronous
@@ -166,18 +167,18 @@ public class S3HandlerImpl implements S3Handler {
             String message = S3Handler.buildDetailedMessageFromAWSException(ie);
             throw new NuxeoException(message);
         }
-        
+
         return ok;
     }
-    
+
     @Override
     public Blob downloadFile(String inKey, File inDestFile) {
-        
+
         ObjectMetadata metadata = null;
 
         try {
             GetObjectRequest gor = new GetObjectRequest(currentBucket, inKey);
-            //metadata = s3.getObject(gor, blob.getFile());
+            // metadata = s3.getObject(gor, blob.getFile());
             Download download = transferManager.download(gor, inDestFile);
             download.waitForCompletion();
             metadata = download.getObjectMetadata();
@@ -189,12 +190,12 @@ public class S3HandlerImpl implements S3Handler {
         } catch (AmazonClientException ace) {
             String message = S3Handler.buildDetailedMessageFromAWSException(ace);
             throw new NuxeoException(message);
-            
+
         } catch (InterruptedException ie) {
             String message = S3Handler.buildDetailedMessageFromAWSException(ie);
             throw new NuxeoException(message);
         }
-        
+
         Blob blob = new FileBlob(inDestFile);
         blob.setDigest(metadata.getETag());
         blob.setEncoding(metadata.getContentEncoding());
@@ -203,7 +204,26 @@ public class S3HandlerImpl implements S3Handler {
 
         return blob;
     }
+
+    @Override
+    public SequenceInputStream getInputStream(String inKey, long pieceSize) throws IOException {
+        
+        S3ObjectSequentialStream seqStream = new S3ObjectSequentialStream(s3, currentBucket, inKey, pieceSize);
+                
+        return seqStream.getInputStream();
+        
+    }
     
+    @Override
+    public byte[] readBytes(String key, long start, long len) throws IOException {
+        GetObjectRequest gor = new GetObjectRequest(currentBucket, key)
+                                   .withRange(start, start + len - 1);
+        S3ObjectInputStream stream = s3.getObject(gor).getObjectContent();
+        byte[] bytes = stream.readAllBytes();
+        stream.close();
+        
+        return bytes;
+    }
 
     @Override
     public Blob downloadFile(String inKey, String inFileName) throws NuxeoException {
@@ -214,13 +234,13 @@ public class S3HandlerImpl implements S3Handler {
         } catch (IOException e) {
             throw new NuxeoException(e);
         }
-        
+
         blob = downloadFile(inKey, blob.getFile());
         if (StringUtils.isBlank(inFileName)) {
             inFileName = FilenameUtils.getName(inKey);
         }
         blob.setFilename(inFileName);
-        
+
         return blob;
     }
 
@@ -243,7 +263,7 @@ public class S3HandlerImpl implements S3Handler {
     }
 
     @Override
-	public String buildPresignedUrl(String inBucket, String inKey, int durationInSeconds, String contentType,
+    public String buildPresignedUrl(String inBucket, String inKey, int durationInSeconds, String contentType,
             String contentDisposition) throws NuxeoException {
 
         if (StringUtils.isBlank(inBucket)) {
@@ -297,7 +317,7 @@ public class S3HandlerImpl implements S3Handler {
 
         boolean exists = false;
 
-        if(StringUtils.isBlank(inBucket)) {
+        if (StringUtils.isBlank(inBucket)) {
             inBucket = currentBucket;
         }
 
@@ -341,37 +361,38 @@ public class S3HandlerImpl implements S3Handler {
             return existsKeyInS3(inBucket, inKey);
         }
     }
-    
+
     @Override
     public ObjectMetadata getObjectMetadata(String inKey) {
-                
+
         ObjectMetadata metadata;
         try {
             metadata = s3.getObjectMetadata(currentBucket, inKey);
-        } catch(AmazonS3Exception e) {
-            throw new NuxeoException(String.format("An error occured while getting key %s in AWS bucket %s", inKey, currentBucket), e);
+        } catch (AmazonS3Exception e) {
+            throw new NuxeoException(
+                    String.format("An error occured while getting key %s in AWS bucket %s", inKey, currentBucket), e);
         }
-        
+
         return metadata;
     }
-    
+
     @Override
     public JsonNode getObjectMetadataJson(String inKey) throws JsonProcessingException {
-        
+
         ObjectMetadata metadata = getObjectMetadata(inKey);
-        
+
         Map<String, Object> metadataMap = metadata.getRawMetadata();
         Map<String, Object> mutableMap = new HashMap<String, Object>(metadataMap);
-        mutableMap.put("bucketName",currentBucket );
+        mutableMap.put("bucketName", currentBucket);
         mutableMap.put("objectKey", inKey);
-        
+
         Map<String, String> userMetadata = metadata.getUserMetadata();
         mutableMap.put("userMetadata", userMetadata);
 
         // Convert Map to JSON
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode json = objectMapper.valueToTree(mutableMap);
-        
+
         return json;
     }
 
@@ -389,12 +410,12 @@ public class S3HandlerImpl implements S3Handler {
     }
 
     @Override
-	public String getBucket() {
+    public String getBucket() {
         return currentBucket;
     }
 
     @Override
-	public int getSignedUrlDuration() {
+    public int getSignedUrlDuration() {
         return signedUrlDuration;
     }
 

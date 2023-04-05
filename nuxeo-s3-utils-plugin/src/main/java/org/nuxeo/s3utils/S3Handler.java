@@ -19,6 +19,9 @@
 package org.nuxeo.s3utils;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.SequenceInputStream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.nuxeo.ecm.core.api.Blob;
@@ -115,6 +118,33 @@ public interface S3Handler {
      * @since 8.2
      */
     public Blob downloadFile(String inKey, String inFileName);
+
+    /**
+     * Get a SequenceInputStream to the object. The goal of using a SequenceInputStream is to avoid time out while
+     * reading large, big objects.
+     * <br>
+     * pieceSize is the size in bytes for each sequential stream. It set the number of streams created (object size /
+     * pieceSize). If 0, a default value is used.
+     * Streams are open/close one after the other.
+     * <br>
+     * The caller can call close() any time, this will close all the streams.
+     * <br>
+     * See S3ObjectSequentialStream for more info.
+     */
+    public static long DEFAULT_PIECE_SIZE = 100 * 1024 * 1024;
+
+    public SequenceInputStream getInputStream(String key, long pieceSize) throws IOException;
+    
+    /**
+     * Read len bytes from start in the object.
+     *
+     * @param key
+     * @param len
+     * @return
+     * @throws IOException
+     * @since TODO
+     */
+    public byte[] readBytes(String key, long start, long len) throws IOException;
 
     /**
      * Deletes the file from S3 using the "current bucket", returns true if succesful
@@ -216,7 +246,7 @@ public interface S3Handler {
      * @since 8.2
      */
     public boolean existsKey(String bucket, String inKey);
-    
+
     /**
      * Gets the object metadata without fetching the object itself,
      * as returned by AWS SDK
