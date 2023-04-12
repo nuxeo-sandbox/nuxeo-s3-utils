@@ -36,7 +36,8 @@ This add-on for [Nuxeo](http://www.nuxeo.com) contains utilities for accessing o
 - [About Hyland-Nuxeo](#aboutnuxeo)
 
 
-##⚠️ Important: Encryption
+
+## ⚠️ Important: Encryption
 The plugin does not handle custom encryption, with a client key. It reads he object from S3, so, it assumes the object is either encrypted by S3 or not encrypted (Adding a client key would not be complicated, inspiration can be taken from Nuxeo source code of the nuxeo S3 Binary Manager.)
 
 
