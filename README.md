@@ -7,12 +7,12 @@ This add-on for [Nuxeo](http://www.nuxeo.com) contains utilities for accessing o
 * *Custom blob provider* to handle objects on buckets that are not the Nuxeo binary bucket. They still get indexed, thumbnail calculated etc. Some important restriction though: The goal is to handle existing files in the bucket(s), so upload (update/creation) is not allowed. See below for details and extra features.
 
 # Table of Content
-- [Important: Encryption](#importantencryption)
-- [Set Up: Configuration](#setupconfiguration)
-  * [Principles and Authentication](#principlesandauthentication)
-  * [Contribute the S3Utils Service](#contributethes3utilsservice)
-  * [Use `nuxeo.conf`](#usenuxeoconf)
-  * [Set Up: An Example](#setupanexample)
+- [Important: Encryption](#important-encryption)
+- [Set Up: Configuration](#set-up-configuration)
+  * [Principles and Authentication](#principles-and-authentication)
+  * [Contribute the S3Utils Service](#contribute-the-s3utils-service)
+  * [Use `nuxeo.conf`](#use-nuxeoconf)
+  * [Set Up: An Example](#set-up-an-example)
 - [Features](#features)
   * [Operations](#operations)
     * [S3Utils.Upload](#s3utilsupload)
@@ -22,18 +22,18 @@ This add-on for [Nuxeo](http://www.nuxeo.com) contains utilities for accessing o
     * [S3Utils.S3TempSignedUrlOp](#s3utilss3tempsignedurlop)
     * [S3Utils.GetObjectMetadata](#s3utilsgetobjectmetadata)
     * [S3Utils.CreateBlobFromObjectKey](#s3utilscreateblobfromobjectkey)
-    * [Import these Operations in your Project](#importtheseoperationsinyourproject)
-    * [How to Tune the REST Filtering](#howtotunetherestfiltering)
-  * [Blob Provider](#blobprovider)
-    * [Limitation](#limitation)
+    * [Import these Operations in your Project](#import-these-operations-in-your-project)
+    * [How to Tune the REST Filtering](#how-to-tune-the-rest-filtering)
+  * [Blob Provider](#the-s3utils-blob-provider)
+    * [Limitations](#limitations)
     * [Usage](#usage)
-  * [Java Features](#javafeatures)
-    * [Streaming an Object](#streaminganobject)
-    * [Temporary Signed URL Class](#temporarysignedurlclass)
-- [Build and Install](#buildandinstall)
+  * [Java Features](#java-features)
+    * [Streaming an Object](#streaming-an-object)
+    * [Temporary Signed URL](#temporary-signed-url)
+- [Build and Install](#build-and-install)
 - [Licensing](#licensing)
 - [Support](#support)
-- [About Hyland-Nuxeo](#aboutnuxeo)
+- [About Hyland-Nuxeo](#about-nuxeo)
 
 
 
@@ -376,8 +376,6 @@ Please, see the code and its JavaDoc for details, `S3ObjectStreaming` interface 
 These features are not available without explicitly calling them in Java though. For example, Nuxeo BlobProvider interface does not handle streaming, so Nuxeo will never try to get a stream from a S3 blob. The purpose of these classes is to allow our prospects/customers (with Java dev. skills of course) to use this code, either as is (as a maven dependency), or by forking it or just copy/pasting the relevant part, to be included in their own plugin(s).
 
 #### Temporary Signed URL
-
-#### The `S3TempSignedURLBuilder` Class 
 The `S3TempSignedURLBuilder` class lets you build a temporary signed URL to an S3 object. As you can see in the JavaDoc and/or in the source, you can get such URL passing just the distant object Key (which is, basically, its relative path). You can also use more parameters: The bucket, the duration (in seconds), the content-type and content-disposition.
 
 Content-Type and Content-Disposition should be used, especially if the distant object has no file extension.
