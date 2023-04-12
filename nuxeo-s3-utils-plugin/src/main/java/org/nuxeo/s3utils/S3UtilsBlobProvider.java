@@ -25,6 +25,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -93,7 +97,7 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
 
     protected static final Log log = LogFactory.getLog(S3UtilsBlobProvider.class);
 
-    public static final String NO_DEFAULT_DOWNLOAD_ABOVE = "noDefaultDownloadAbove"; // "1073741824"; //1024 * 1024 *
+    public static final String NO_DEFAULT_DOWNLOAD_ABOVE_PROPERTY = "noDefaultDownloadAbove"; // "1073741824"; //1024 * 1024 *
                                                                                      // 1024
 
     public static final String CACHE_SIZE_PROPERTY = "cacheSize";
@@ -132,7 +136,7 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
         initializeCache(SizeUtils.parseSizeInBytes(cacheSizeStr), Long.parseLong(cacheCountStr),
                 Long.parseLong(minAgeStr));
 
-        String maxForDefaultDownloadStr = properties.getOrDefault(NO_DEFAULT_DOWNLOAD_ABOVE, "0");
+        String maxForDefaultDownloadStr = properties.getOrDefault(NO_DEFAULT_DOWNLOAD_ABOVE_PROPERTY, "0");
         maxForDefaultDownload = Long.parseLong(maxForDefaultDownloadStr);
     }
 
@@ -170,8 +174,32 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
 
     @Override
     public InputStream getStream(ManagedBlob blob) throws IOException {
+
         File cachedFile = getFileFromCache(blob);
         return new FileInputStream(cachedFile);
+    }
+
+    @Override
+    public File getFile(ManagedBlob blob) {
+
+        File f = null;
+        try {
+            f = getFileFromCache(blob);
+            // Files in the cache have their name set as the ETag, we must
+            // change this.
+            String path = FilenameUtils.getPath(f.getAbsolutePath());
+            if (path.lastIndexOf("/") < 0) {
+                path += "/";
+            }
+            Path source = Paths.get(f.getAbsolutePath());
+            Path result = Files.move(source, source.resolveSibling(blob.getFilename()),
+                    StandardCopyOption.REPLACE_EXISTING);
+            f = new File(result.toString());
+
+        } catch (IOException e) {
+            throw new NuxeoException("Erreur getting a file for blob key " + blob.getKey(), e);
+        }
+        return f;
     }
 
     public SequenceInputStream getInputStream(ManagedBlob blob) throws IOException {
@@ -359,6 +387,10 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
         }
         return converted.getFile();
 
+    }
+    
+    public long getMaxForDefaultDownload() {
+        return maxForDefaultDownload;
     }
 
 }

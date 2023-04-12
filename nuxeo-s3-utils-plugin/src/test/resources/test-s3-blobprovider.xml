@@ -14,6 +14,20 @@
       <property name="noDefaultDownloadAbove"></property>
       -->
     </blobprovider>
+    
+    <blobprovider name="TestS3BlobProvider-withDownloadThreshold">
+      <class>org.nuxeo.s3utils.S3UtilsBlobProvider</class>
+      <property name="preventUserUpdate">true</property>
+      <!--  Threshold 100K --> -->
+      <property name="noDefaultDownloadAbove">102400</property>
+      <!--  All other properties: default values -->
+      <!--
+      <property name="cacheSize"></property>
+      <property name="cacheSount"></property>
+      <property name="cacheMinAge"></property>
+      <property name="s3Handler"></property>
+      -->
+    </blobprovider>
   </extension>
 
 </component>
