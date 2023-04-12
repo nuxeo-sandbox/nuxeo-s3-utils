@@ -59,7 +59,7 @@ import com.amazonaws.services.s3.model.S3ObjectInputStream;
  * 
  * Thanks to Alex Chan and its original scala code (https://alexwlchan.net/2019/streaming-large-s3-objects/)
  * 
- * @since TODO
+ * @since 2021.35
  */
 public class S3ObjectSequentialStream implements Enumeration<S3ObjectInputStream> {
 

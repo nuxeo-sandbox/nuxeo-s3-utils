@@ -52,11 +52,10 @@ import org.nuxeo.ecm.platform.mimetype.service.MimetypeRegistryService;
 import org.nuxeo.runtime.api.Framework;
 
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.google.inject.Inject;
 
 /**
  * A blob provider for handling S3 objects existing in other bucket than the one
- * used by the binary manager, adding some feature (see noDefaultDownloadAbove for example).
+ * used by the binary manager, adding some features (see noDefaultDownloadAbove for example, or the streaming from s3).
  * Thanks to Michael Vachette, we got inspiration from his nuxeo-s3-simple-blobprovider plugin.
  * <br>
  * It is related to a S3Handler for getting region/bucket/AWS Credentials/etc.
@@ -184,14 +183,14 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
 
         return stream;
     }
-    
+
     public byte[] readBytes(ManagedBlob blob, long start, long len) throws IOException {
 
         BlobKey blobKey = new BlobKey(blobProviderId, blob.getKey(), s3Handler.getBucket());
         String objectKey = blobKey.getObjectKey();
-        
+
         return s3Handler.readBytes(objectKey, start, len);
-        
+
     }
 
     @Override

@@ -7,11 +7,11 @@
            uri="urn:nuxeo-artifact" />
   <taskdef resource="net/sf/antcontrib/antlib.xml" />
 
-  <target name="build" description="Build Nuxeo S3 Utils Package">
+  <target name="build" description="Build ${maven.project.name}">
     <property name="outdir" value="${maven.project.build.directory}" />
     <!-- Include your artifacts in the graph adding your groupId to groupPrefixes -->
     <artifact:nuxeo-expand includeTestScope="true"
-                           groupPrefixes="nuxeo-s3-utils" />
+                           groupPrefixes="org.nuxeo.labs" />
     <!-- Prints the graph for debugging purpose -->
     <artifact:print output="${outdir}/dependency-tree.log" />
     <tstamp />
@@ -41,7 +41,7 @@
           <artifact groupId="org.nuxeo*" />
           <artifact groupId="nuxeo-studio" />
           <!-- Include your artifacts using their groupId for instance -->
-          <artifact groupId="nuxeo-s3-utils*" />
+          <artifact groupId="org.nuxeo.labs*" />
         </includes>
         <excludes>
           <artifact groupId="${maven.project.groupId}" artifactId="${maven.project.artifactId}" version="${maven.project.version}" type="${maven.project.packaging}"/>
@@ -67,7 +67,7 @@
           <artifact type="pom" />
           <artifact groupId="nuxeo-studio" />
           <!-- Filter out your artifacts using their groupId for instance -->
-          <artifact groupId="nuxeo-s3-utils*" />
+          <artifact groupId="org.nuxeo.labs*" />
         </excludes>
       </artifact:set>
     </copy>
@@ -117,7 +117,7 @@
           name="install.templates"
           value="${line.separator}
   &lt;copy dir=&quot;${package.root}/install/templates&quot; todir=&quot;${env.templates}&quot; overwrite=&quot;true&quot; /&gt;${line.separator}
-  &lt;config addtemplate=&quot;nuxeo-dynamic-asset-transformation&quot; /&gt;${line.separator}" />
+  &lt;config addtemplate=&quot;nuxeo-s3-utils&quot; /&gt;${line.separator}" />
       </then>
     </if>
 

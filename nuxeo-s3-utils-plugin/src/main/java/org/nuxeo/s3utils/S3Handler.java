@@ -20,7 +20,6 @@ package org.nuxeo.s3utils;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.SequenceInputStream;
 
 import org.apache.commons.lang3.StringUtils;
@@ -43,7 +42,7 @@ import com.fasterxml.jackson.databind.JsonNode;
  *
  * @since 8.2
  */
-public interface S3Handler {
+public interface S3Handler extends S3ObjectStreaming {
 
     /**
      * Called after a new instance has been created.
@@ -130,19 +129,22 @@ public interface S3Handler {
      * The caller can call close() any time, this will close all the streams.
      * <br>
      * See S3ObjectSequentialStream for more info.
+     * 
+     * @param key
+     * @param pieceSize
+     * @return the SequenceInputStream
+     * @throws IOException
+     * @since 2021.35
      */
     public static long DEFAULT_PIECE_SIZE = 100 * 1024 * 1024;
 
-    public SequenceInputStream getInputStream(String key, long pieceSize) throws IOException;
-    
     /**
-     * Read len bytes from start in the object.
-     *
-     * @param key
-     * @param len
-     * @return
-     * @throws IOException
-     * @since TODO
+     * @see S3ObjectStreaming#getInputStream(String, long)
+     */
+    public SequenceInputStream getInputStream(String key, long pieceSize) throws IOException;
+
+    /**
+     * @see S3ObjectStreaming#readBytes(String, long, long)
      */
     public byte[] readBytes(String key, long start, long len) throws IOException;
 

@@ -4,7 +4,41 @@
 This add-on for [Nuxeo](http://www.nuxeo.com) contains utilities for accessing objects in AWS S3 bucket(s):
 
 * *Operations* to upload or download a file, generate a temporary signed URL, etc.
-* *Custom blob provider* to handle objects on buckets that are not the Nuxeo binary bucket. They still get indexed, thumbnail calculated etc. Some important restriction though: The goal is to handle existing files in the bucket(s), so upload (update/creation) is not allowed. See below for details
+* *Custom blob provider* to handle objects on buckets that are not the Nuxeo binary bucket. They still get indexed, thumbnail calculated etc. Some important restriction though: The goal is to handle existing files in the bucket(s), so upload (update/creation) is not allowed. See below for details and extra features.
+
+# Table of Content
+- [Important: Encryption](#importantencryption)
+- [Set Up: Configuration](#setupconfiguration)
+  * [Principles and Authentication](#principlesandauthentication)
+  * [Contribute the S3Utils Service](#contributethes3utilsservice)
+  * [Use `nuxeo.conf`](#usenuxeoconf)
+  * [Set Up: An Example](#setupanexample)
+- [Features](#features)
+  * [Operations](#operations)
+    * [S3Utils.Upload](#s3utilsupload)
+    * [S3Utils.Download](#s3utilsdownload)
+    * [S3Utils.Delete](#s3utilsdelete)
+    * [S3Utils.KeyExists](#s3utilskeyexists)
+    * [S3Utils.S3TempSignedUrlOp](#s3utilss3tempsignedurlop)
+    * [S3Utils.GetObjectMetadata](#s3utilsgetobjectmetadata)
+    * [S3Utils.CreateBlobFromObjectKey](#s3utilscreateblobfromobjectkey)
+    * [Import these Operations in your Project](#importtheseoperationsinyourproject)
+    * [How to Tune the REST Filtering](#howtotunetherestfiltering)
+  * [Blob Provider](#blobprovider)
+    * [Limitation](#limitation)
+    * [Usage](#usage)
+  * [Java Features](#javafeatures)
+    * [Streaming an Object](#streaminganobject)
+    * [Temporary Signed URL Class](#temporarysignedurlclass)
+- [Build and Install](#buildandinstall)
+- [Licensing](#licensing)
+- [Support](#support)
+- [About Hyland-Nuxeo](#aboutnuxeo)
+
+
+##⚠️ Important: Encryption
+The plugin does not handle custom encryption, with a client key. It reads he object from S3, so, it assumes the object is either encrypted by S3 or not encrypted (Adding a client key would not be complicated, inspiration can be taken from Nuxeo source code of the nuxeo S3 Binary Manager.)
+
 
 ## Set Up: Configuration
 ### Principles and Authentication
@@ -13,14 +47,14 @@ The plugin creates:
 * A `S3Handler` tool, that is in charge of performing the actions (download, upload, ...).
 * A `S3UtilsBlobProvider` that can be used to handle Blobs linked to an object in a S3 bucket. This BlobProvider uses a `S3Handler` for actions on the bucket. To link a Blob in Nuxeo to an object in your bucket, you will use the `S3Utils.CreateBlobFromObjectKey` operation (see below)
 
-Both connects to S3 using your credentials, a region and a bucket. In order to allow connecting to several to several buckets (within the same account), the plugin exposes a _service_, allowing you to access different buckets: You contribute as many S3 Handlers (and possibly several `S3UtilsBlobProvider`) as you need, given each of them a unique name.
+Both connects to S3 using your credentials, a region and a bucket. In order to allow connecting to several buckets (within the same account), the plugin exposes a _service_, allowing you to access different buckets: You contribute as many S3 Handlers (and possibly several `S3UtilsBlobProvider`) as you need, given each of them a unique name.
 
 The plugin uses Nuxeo AWS Credential code to handle authentication (the `NuxeoAWSCredentialsProvider` class), which means you must either:
 
 * Use nuxeo configuration parameters/XML extension point to set up your AWS credentials (see https://doc.nuxeo.com/nxdoc/amazon-s3-online-storage/)
 * Be already authenticated and/or you have setup the expected AWS environment variables before starting Nuxeo (or running the unit tests). This would be the case if, for example, Nuxeo is running from an EC2 instance on AWS (and this instance has permission to access the bucket(s))
 
-For example, on way to run unit tests is to: (in a terminal):
+For example, on way to run unit tests is to (in a terminal):
 
 * Authenticate to AWS (like, run `aws s3 ls` and authenticate)
 * Then, run `mvn install`
@@ -44,8 +78,8 @@ Fo each S3 account and bucket you want to access, just add the following contrib
     
     <!-- REQUIRED
          Multipart upload is always possible.
-         These values must be set and not empty. Set it to 0
-         if you want to use the default AWS values -->
+         These values must be set and cannot be empty, or the start of Nuxeo will fail with a conversion error
+         Set it to 0 if you want to use the default AWS SDK values -->
     <minimumUploadPartSize>0</minimumUploadPartSize>
     <multipartUploadThreshold>0</multipartUploadThreshold>
   </s3Handler>
@@ -172,88 +206,92 @@ Now, we can use the "S3-Bucket-one" or the "S3-Bucket-Two" handlers.
 * See below: You must pass the correct handler name to the mmisc. operation you will be using.
 
 ## Features
-* Operation
+* Operations
 * Blob Provider
+* Java features (like streaming from S3 without downloading)
 
 ### Operations
 The plugin contributes the following operations to be used in an Automation Chain.
 
 **WARNING**: For security reason, the operations that read/write S3 are, by default, restricted to administrators when called from REST. See below the details and how to tune the behavior.
 
-* **Files > S3 Utils: Upload** (ID: `S3Utils.Upload`)
-  * Upload a file to S3
-  * Accepts `Document` or `Blob`, returns the input unchanged
-  * Parameters:
-    * `handlerName`: The name of the S3Handler to use (see examples above)
-    * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
-    * `key`: The key to use for S3 storage
-    * `xpath`: When the input is `Document`, the field to use. Default value is the main blob, `file:content`.
-  * *Notice* Upload uses Amazon `TransferManager` and will perform multipart uploads depending on the values set in the configuration (`minimumUploadPartSize`  and `multipartUploadThreshold`). See explanations above.
+#### `S3Utils.Upload`
+* Label: `Files > S3 Utils: Upload`
+* Upload a file to S3
+* Accepts `Document` or `Blob`, returns the input unchanged
+* Parameters:
+  * `handlerName`: The name of the S3Handler to use (see examples above)
+  * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
+  * `key`: The key to use for S3 storage
+  * `xpath`: When the input is `Document`, the field to use. Default value is the main blob, `file:content`.
+* *Notice* Upload uses Amazon `TransferManager` and will perform multipart uploads depending on the values set in the configuration (`minimumUploadPartSize`  and `multipartUploadThreshold`). See explanations above.
+
+#### `S3Utils.Download`
+* Label: `Files > S3 Utils: Download`
+* Input is `void`, downloads a file from S3, returns a `Blob` of the file
+* Parameters:
+  * `handlerName`: The name of the S3Handler to use (see examples above)
+  * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
+  * `key`: The key of the file on S3
+* *Notice* Download uses Amazon `TransferManager` and will perform multipart downloads when possible.
 
 
-* **Files > S3 Utils: Download** (ID: `S3Utils.Download`)
-  * Input is `void`, downloads a file from S3, returns a `Blob` of the file
-  * Parameters:
-    * `handlerName`: The name of the S3Handler to use (see examples above)
-    * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
-    * `key`: The key of the file on S3
-  * *Notice* Download uses Amazon `TransferManager` and will perform multipart downloads when possible.
+#### `S3Utils.Delete`
+* Label: `Files > S3 Utils: Delete`
+* Input is `void`, deletes a file from S3, returns void
+* Sets a new context variable with the result: `s3UtilsDeletionResult` will contain `"true"` if the key was deleted on S3, or `"false"` if it could not be deleted.
+* Parameters:
+  * `handlerName`: The name of the S3Handler to use (see examples above)
+  * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
+  * `key`: The key of the file on S3
 
+#### `S3Utils.KeyExists`
+* Label: `Files > S3 Utils: Key Exists`
+* Input is `void`, returns `void`
+* Sets a new context variable with the result: `s3UtilsKeyExists`. It is a `boolean` variable, set to `true` or `false` depending on the result of the test.
+* Parameters:
+  * `key`: The key of the file on S3 (required)
+  * `handlerName`: The name of the S3Handler to use (see examples above). optional.
+  * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
+  * `useCache`: Optional, default is `false`. If the S3Handler has been configured to cache the results of KeyExists, it will first search in the cache. If you need to make 100% a key exists or not at the time of the call, ignore this parameter
 
-* **Files > S3 Utils: Delete** (ID: `S3Utils.Delete`)
-  * Input is `void`, deletes a file from S3, returns void
-  * Sets a new context variable with the result: `s3UtilsDeletionResult` will contain `"true"` if the key was deleted on S3, or `"false"` if it could not be deleted.
-  * Parameters:
-    * `handlerName`: The name of the S3Handler to use (see examples above)
-    * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
-    * `key`: The key of the file on S3
-
-* **Files > S3 Utils: Key Exists** (ID: `S3Utils.KeyExists`)
-  * Input is `void`, returns `void`
-  * Sets a new context variable with the result: `s3UtilsKeyExists`. It is a `boolean` variable, set to `true` or `false` depending on the result of the test.
-  * Parameters:
-    * `key`: The key of the file on S3 (required)
-    * `handlerName`: The name of the S3Handler to use (see examples above). optional.
-    * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
-    * `useCache`: Optional, default is `false`. If the S3Handler has been configured to cache the results of KeyExists, it will first search in the cache. If you need to make 100% a key exists or not at the time of the call, ignore this parameter
-
-* **Files > S3 Utils: Temp Signed URL** (ID: `S3Utils.S3TempSignedUrlOp`)
-  * Input is `void`, returns `void`
-  * Sets a new context variable with the result: `s3UtilsTempSignedUrl`. It is a `String` variable, containing the temporary signed URL.
-  * Parameters:
-    * `key`: The key of the file on S3 (required)
-    * `handlerName`: The name of the S3Handler to use (see examples above). optional.
-    * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
-    * `durationInSeconds`: Optional, default is set to the value found in the S3Handler configuration.
-    * `contentType`: Optional, String.
-    * `contentDisposition`: Optional, String.<br/>
+#### `S3Utils.S3TempSignedUrlOp`
+* Label: `Files > S3 Utils: Temp Signed URL`
+* Input is `void`, returns `void`
+* Sets a new context variable with the result: `s3UtilsTempSignedUrl`. It is a `String` variable, containing the temporary signed URL.
+* Parameters:
+  * `key`: The key of the file on S3 (required)
+  * `handlerName`: The name of the S3Handler to use (see examples above). optional.
+  * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
+  * `durationInSeconds`: Optional, default is set to the value found in the S3Handler configuration.
+  * `contentType`: Optional, String.
+  * `contentDisposition`: Optional, String.<br/>
       `contentType` and `contentDisposition` are optional but it is recommended to set them to make sure the is no ambiguity when the URL is used (a key without a file extension for example)
 
-* **Files > S3 Utils: Get Object Metadata** (ID: `S3Utils.GetObjectMetadata`)
-  * Input is `void`, returns `blob`
-  * Returns a JsonBlob holding the metadata (fetching the metadata without fetching the object)
-  * Parameters:
-    * `key`: The key of the file on S3 (required)
-    * `handlerName`: The name of the S3Handler to use. Optional.
-  * **IMPORTANT**: If `key` is not found, returns an empty object (`{}`)
-  * Else, returns:
-    * The system metadata ("Content-Type", "Content-Length", "ETag", ...)
-    * Plus some other properties: `bucket`, `key` and `userMetadata`, which is a Json object (can be empty) holding all the user metadata for the object.
-  * Notice: When a metadata is not set, it is not returned by AWS (for example, Content-Encoding, of md5 are not always there)
+#### `S3Utils.GetObjectMetadata`
+* Label: `Files > S3 Utils: Get Object Metadata`
+* Input is `void`, returns `blob`
+* Returns a JsonBlob holding the metadata (fetching the metadata without fetching the object)
+* Parameters:
+  * `key`: The key of the file on S3 (required)
+  * `handlerName`: The name of the S3Handler to use. Optional.
+* **IMPORTANT**: If `key` is not found, returns an empty object (`{}`)
+* Else, returns:
+  * The system metadata ("Content-Type", "Content-Length", "ETag", ...)
+  * Plus some other properties: `"bucket"`, `"key"` and `"userMetadata"`, which is a Json object (can be empty) holding all the user metadata for the object.
+* Notice: When a metadata is not set, it is not returned by AWS (for example, Content-Encoding, of md5 are not always there)
 
-* **Files > S3 Utils: S3 Utils: Create Blob from Object Key** (ID: `S3Utils.CreateBlobFromObjectKey`)
-  * Input is `void`, returns `blob`
-  * Returns a Blob holding the reference to the remote S3 object. This blob can then be stored in any blob field of a document (typically `file:content`)
-  * Parameters:
-    * `blobProviderId`: required, the BlobProvider ID, as contributed via XML (see an example below, _The S3Utils Blob Provider_)
-    * `objectKey`: Required, the key of the object in the S3 bucket.
-  * Notice you don't specify a bucket. The operation reads the bucket from the `S3Handler` linked to the BlobProvider (see below _The S3Utils Blob Provider_).
+#### `S3Utils.CreateBlobFromObjectKey`
+* Label: `Files > S3 Utils: Create Blob from Object Key`
+* Input is `void`, returns `blob`
+* Returns a Blob holding the reference to the remote S3 object. This blob can then be stored in any blob field of a document (typically `file:content`)
+* Parameters:
+  * `blobProviderId`: required, the BlobProvider ID, as contributed via XML (see an example below, _The S3Utils Blob Provider_)
+  * `objectKey`: Required, the key of the object in the S3 bucket.
+* Notice you don't specify a bucket. The operation reads the bucket from the `S3Handler` linked to the BlobProvider (see below _The S3Utils Blob Provider_).
 
-  
-  
-  
 
-#### How to Import these Operations in your Project?
+#### Import these Operations in your Project
 The principles are:
 
 * Get the JSON definition of the operation(s) you need
@@ -293,7 +331,7 @@ You can (see below) tune the provider so it does not download files bigger than 
 
 * **No write**
   * For now, the provider does not allow to upload a blob to you s3 bucket (no new file, no update)
-* **No automatically update form the S3 files**: If a file is modified on s3, it is not updated in Nuxeo (no new thumbnail calculated, no fulltext index recalculated, …)
+* **No automatical update form the S3 files**: If a file is modified on s3, it is not updated in Nuxeo (no new thumbnail calculated, no fulltext index recalculated, …)
 
 
 #### Usage
@@ -327,7 +365,16 @@ To use the provider, you must just contribute the BlobManager as in the followin
   * Notice you can always handle the thumbnail yourself (Add the `Thumbnail` facet and set an image to `thumb:thumb`for example), the preview (tune your nuxeo-yourdoc-view-layout to display something relevant, etc.
 
 
-### Temporary Signed URL
+### Java Features
+
+#### Streaming an Object
+Both the `S3HandlerImpl` and the `S3UtilsBlobProvider` classes allow for _streaming_ an object form S3. This can be very useful when you don't want/don't need to actually download it. Both classes allow for streaming the whole object or a range.
+
+Please, see the code and its JavaDoc for details, `S3ObjectStreaming` interface and the `getInputStream`and `readBytes` methods.
+
+These features are not available without explicitly calling them in Java though. For example, Nuxeo BlobProvider interface does not handle streaming, so Nuxeo will never try to get a stream from a S3 blob. The purpose of these classes is to allow our prospects/customers (with Java dev. skills of course) to use this code, either as is (as a maven dependency), or by forking it or just copy/pasting the relevant part, to be included in their own plugin(s).
+
+#### Temporary Signed URL
 
 #### The `S3TempSignedURLBuilder` Class 
 The `S3TempSignedURLBuilder` class lets you build a temporary signed URL to an S3 object. As you can see in the JavaDoc and/or in the source, you can get such URL passing just the distant object Key (which is, basically, its relative path). You can also use more parameters: The bucket, the duration (in seconds), the content-type and content-disposition.

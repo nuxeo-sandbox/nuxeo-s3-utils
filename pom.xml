@@ -7,7 +7,7 @@
     <artifactId>nuxeo-parent</artifactId>
     <version>2021.25</version>
   </parent>
-  <groupId>nuxeo-s3-utils</groupId>
+  <groupId>org.nuxeo.labs</groupId>
   <artifactId>nuxeo-s3-utils-parent</artifactId>
   <name>Parent Project for Nuxeo S3 Utils</name>
   <version>3.0.1-SNAPSHOT</version>
@@ -26,12 +26,12 @@
     <dependencies>
       <!-- S3 Utils -->
       <dependency>
-        <groupId>nuxeo-s3-utils</groupId>
+        <groupId>org.nuxeo.labs</groupId>
         <artifactId>nuxeo-s3-utils-plugin</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
-        <groupId>nuxeo-s3-utils</groupId>
+        <groupId>org.nuxeo.labs</groupId>
         <artifactId>nuxeo-s3-utils-mp</artifactId>
         <version>${project.version}</version>
       </dependency>

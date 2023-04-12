@@ -20,7 +20,6 @@ package org.nuxeo.s3utils;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
