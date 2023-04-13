@@ -15,7 +15,6 @@
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-core</artifactId>
-      <scope>provided</scope>
      <!--
       <exclusions>
         <exclusion>
@@ -28,7 +27,6 @@
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-s3</artifactId>
-      <scope>provided</scope>
     </dependency>
 
     <!-- Nuxeo -->
