@@ -10,7 +10,7 @@
   <groupId>org.nuxeo.labs</groupId>
   <artifactId>nuxeo-s3-utils-parent</artifactId>
   <name>Parent Project for Nuxeo S3 Utils</name>
-  <version>3.1.1-SNAPSHOT</version>
+  <version>3.1.3-SNAPSHOT</version>
   <packaging>pom</packaging>
   <description />
   <properties>
