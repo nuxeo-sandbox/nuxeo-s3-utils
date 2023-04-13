@@ -19,7 +19,6 @@
 package org.nuxeo.s3utils.test;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -52,11 +51,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.SequenceInputStream;
-import java.io.Serializable;
-import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -65,6 +60,8 @@ import java.util.Map;
  */
 @RunWith(FeaturesRunner.class)
 @Features({ PlatformFeature.class, SimpleFeatureCustom.class })
+@Deploy("org.nuxeo.ecm.platform.commandline.executor")
+@Deploy("org.nuxeo.ecm.platform.convert")
 @Deploy("nuxeo-s3-utils")
 public class TestS3UtilsBlobProvider {
 
@@ -176,8 +173,6 @@ public class TestS3UtilsBlobProvider {
     }
 
     @Test
-    @Deploy("org.nuxeo.ecm.platform.commandline.executor")
-    @Deploy("org.nuxeo.ecm.platform.convert")
     public void testGetBlobImageWithDownloadThreshold() throws Exception {
 
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
