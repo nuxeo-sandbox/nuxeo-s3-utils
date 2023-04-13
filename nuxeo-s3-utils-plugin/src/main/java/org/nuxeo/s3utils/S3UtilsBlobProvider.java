@@ -202,12 +202,12 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
         return f;
     }
 
-    public SequenceInputStream getInputStream(ManagedBlob blob) throws IOException {
+    public SequenceInputStream getSequenceInputStream(ManagedBlob blob) throws IOException {
 
         BlobKey blobKey = new BlobKey(blobProviderId, blob.getKey(), s3Handler.getBucket());
         String objectKey = blobKey.getObjectKey();
 
-        SequenceInputStream stream = s3Handler.getInputStream(objectKey, 0);
+        SequenceInputStream stream = s3Handler.getSequenceInputStream(objectKey, 0);
 
         return stream;
     }

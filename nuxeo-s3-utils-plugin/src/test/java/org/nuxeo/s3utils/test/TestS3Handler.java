@@ -42,6 +42,7 @@ import org.nuxeo.s3utils.CacheForKeyExists;
 import org.nuxeo.s3utils.Constants;
 import org.nuxeo.s3utils.S3Handler;
 import org.nuxeo.s3utils.S3ObjectSequentialStream;
+import org.nuxeo.s3utils.test.SimpleFeatureCustom.BigObjectInfo;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -227,31 +228,27 @@ public class TestS3Handler {
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
         Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
         
-        String key = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_KEY);
-        String sizeStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_SIZE);
-        String pieceSizeStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_PIECE_SIZE);
-        Assume.assumeTrue("No big object info in the configuration file", !StringUtils.isAnyBlank(key, sizeStr, pieceSizeStr));
+        SimpleFeatureCustom.BigObjectInfo boi = new SimpleFeatureCustom.BigObjectInfo();
+        Assume.assumeTrue("No big object info in the configuration file", boi.ok);
 
-        long pieceSize = Long.parseLong(pieceSizeStr);
-        SequenceInputStream stream = s3Handler.getInputStream(key, pieceSize);
+        SequenceInputStream stream = s3Handler.getSequenceInputStream(boi.key, boi.pieceSize);
         assertNotNull(stream);
         
         // Here we just check we have all the good amount
-        long expectedSize = Long.parseLong(sizeStr);
         long size = 0;
         long bytesLength;
         // Let's read "big" chunks
         int buffer = 500 * 1024;
         // Must be < pieceSize though
-        if(pieceSize > 0 && buffer >= pieceSize) {
-            buffer = (int) (pieceSize / 2);
+        if(boi.pieceSize > 0 && buffer >= boi.pieceSize) {
+            buffer = (int) (boi.pieceSize / 2);
         }
         do {
             byte bytes[] = stream.readNBytes(buffer);
             bytesLength = bytes.length;
             size += bytesLength;
         } while (bytesLength > 0);
-        assertEquals(expectedSize, size);
+        assertEquals(boi.size, size);
                 
     }
     
@@ -264,21 +261,15 @@ public class TestS3Handler {
         Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
         Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
         
-        String key = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_KEY);
-        String startStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_START);
-        String lenStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_LEN);
-        String expectedValue = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_VALUE);
-        Assume.assumeTrue("No big object info in the configuration file", !StringUtils.isAnyBlank(key, startStr, lenStr, expectedValue));
-
-        long start = Long.parseLong(startStr);
-        long len = Long.parseLong(lenStr);
+        SimpleFeatureCustom.BigObjectInfo boi = new SimpleFeatureCustom.BigObjectInfo();
+        Assume.assumeTrue("No big object info in the configuration file", boi.ok);
         
-        byte[] bytes = s3Handler.readBytes(key, start, len);
+        byte[] bytes = s3Handler.readBytes(boi.key, boi.readBytesStart, boi.readBytesLen);
         // Our test file is a pure text, change this unit test if it's different for you
-        assertEquals(len, bytes.length);
+        assertEquals(boi.readBytesLen, bytes.length);
         
         String resultStr = new String(bytes);
-        assertEquals(expectedValue, resultStr);
+        assertEquals(boi.readBytesValue, resultStr);
         
     }
 

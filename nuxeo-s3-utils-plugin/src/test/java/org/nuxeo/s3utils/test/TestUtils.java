@@ -18,16 +18,25 @@
  */
 package org.nuxeo.s3utils.test;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
 import org.apache.commons.lang3.StringUtils;
+import org.nuxeo.ecm.core.api.CoreSession;
+import org.nuxeo.ecm.core.api.DocumentModel;
+import org.nuxeo.ecm.core.blob.ManagedBlob;
+import org.nuxeo.runtime.test.runner.TransactionalFeature;
 import org.nuxeo.s3utils.Constants;
 import org.nuxeo.s3utils.S3Handler;
+import org.nuxeo.s3utils.S3UtilsBlobProvider;
 
 import com.amazonaws.SdkClientException;
 
@@ -45,7 +54,7 @@ public class TestUtils {
     public static boolean awsCredentialsLookOk() {
 
         if (credentialsLookOk == -1) {
-            
+
             credentialsLookOk = 1;
             if (SimpleFeatureCustom.hasLocalTestConfiguration()) {
                 String bucket = (String) SimpleFeatureCustom.getLocalProperty(
@@ -67,7 +76,7 @@ public class TestUtils {
                         + "' configuration file is missing: Cannot check AWS connection ");
             }
         }
-        
+
         return credentialsLookOk == 1;
 
     }
@@ -125,5 +134,36 @@ public class TestUtils {
         }
 
         return resultFile;
+    }
+
+    /**
+     * Utility to avoid copy/pasting the same code everywhere.
+     * The code:
+     * - Creates the DocumentModel,
+     * - attach the blob to file:content,
+     * - Wait for async work (TransactionalFeature)
+     * - Refresh and return the doc
+     * 
+     * @param session
+     * @param transactionalFeature
+     * @param ManagedBlob
+     * @return
+     * @throws Exception
+     * @since TODO
+     */
+    public static DocumentModel createDocWithBlob(CoreSession session, TransactionalFeature transactionalFeature,
+            ManagedBlob blob) throws Exception {
+
+        // Create document, assign the blob
+        DocumentModel doc = session.createDocumentModel("/", "testfile", "File");
+        doc.setPropertyValue("file:content", (Serializable) blob);
+        doc = session.createDocument(doc);
+
+        // Wait for async stuff
+        transactionalFeature.nextTransaction();
+
+        // Refresh and check
+        doc = session.getDocument(doc.getRef());
+        return doc;
     }
 }

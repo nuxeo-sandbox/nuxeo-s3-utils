@@ -23,7 +23,7 @@ public interface S3ObjectStreaming {
      * @throws IOException
      * @since 2021.35
      */
-    public SequenceInputStream getInputStream(String inKey, long pieceSize) throws IOException;
+    public SequenceInputStream getSequenceInputStream(String inKey, long pieceSize) throws IOException;
 
     /**
      * Read len bytes from start in the object.

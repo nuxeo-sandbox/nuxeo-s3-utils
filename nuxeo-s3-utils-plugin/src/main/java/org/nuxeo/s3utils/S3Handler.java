@@ -139,9 +139,9 @@ public interface S3Handler extends S3ObjectStreaming {
     public static long DEFAULT_PIECE_SIZE = 100 * 1024 * 1024;
 
     /**
-     * @see S3ObjectStreaming#getInputStream(String, long)
+     * @see S3ObjectStreaming#getSequenceInputStream(String, long)
      */
-    public SequenceInputStream getInputStream(String key, long pieceSize) throws IOException;
+    public SequenceInputStream getSequenceInputStream(String key, long pieceSize) throws IOException;
 
     /**
      * @see S3ObjectStreaming#readBytes(String, long, long)

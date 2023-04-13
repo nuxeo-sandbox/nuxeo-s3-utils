@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.util.MissingResourceException;
 import java.util.Properties;
 
+import org.apache.commons.lang3.StringUtils;
+import org.junit.Assume;
 import org.nuxeo.common.utils.FileUtils;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -41,7 +43,6 @@ import com.amazonaws.SdkClientException;
  * <li>Use environment variables: Setup your environment and inject the expected
  * variables. This would be used when automating testing with maven for example
  * (passing the env. variables to maven)</li>
- *
  * <li>Use the (git ignored) "aws-test.conf" file:
  * <ul>
  * <li>We have a file named aws-test.conf at
@@ -51,10 +52,8 @@ import com.amazonaws.SdkClientException;
  * <li>The .gitignore config file ignores this file, so it is not sent on
  * GitHub</li>
  * </ul>
- *
  * </li>
  * </ul>
- *
  * So, basically to run the test, create this file at
  * nuxeo-s3utils-plugin/src/test/resources/ and set the following properties:
  *
@@ -87,7 +86,6 @@ import com.amazonaws.SdkClientException;
  * }
  * </pre>
  * </ul>
- *
  * Whatever you choose, the properties will be loaded and set in the
  * environment, so the "default" S3Handler contribution (see
  * s3-utils-service.xml) will use them.
@@ -97,17 +95,17 @@ import com.amazonaws.SdkClientException;
 @Deploy("org.nuxeo.runtime.aws")
 public class SimpleFeatureCustom implements RunnerFeature {
 
-	public static final String TEST_CONF_FILE = "aws-test.conf";
+    public static final String TEST_CONF_FILE = "aws-test.conf";
 
     public static final String TEST_CONF_KEY_NAME_AWS_REGION = "test.aws.region";
 
-	public static final String TEST_CONF_KEY_NAME_AWS_S3_BUCKET = "test.aws.s3.bucket";
+    public static final String TEST_CONF_KEY_NAME_AWS_S3_BUCKET = "test.aws.s3.bucket";
 
-	public static final String TEST_CONF_KEY_NAME_USE_CACHE = "test.use.cache";
+    public static final String TEST_CONF_KEY_NAME_USE_CACHE = "test.use.cache";
 
-	public static final String TEST_CONF_KEY_NAME_OBJECT_KEY = "test.object.key";
+    public static final String TEST_CONF_KEY_NAME_OBJECT_KEY = "test.object.key";
 
-	public static final String TEST_CONF_KEY_NAME_OBJECT_SIZE = "test.object.size";
+    public static final String TEST_CONF_KEY_NAME_OBJECT_SIZE = "test.object.size";
 
     public static final String TEST_CONF_KEY_NAME_OBJECT_MIMETYPE = "test.object.mimetype";
 
@@ -124,68 +122,68 @@ public class SimpleFeatureCustom implements RunnerFeature {
     public static final String TEST_CONF_KEY_NAME_BIGOBJECT_MIMETYPE = "test.bigobject.mimetype";
 
     public static final String TEST_CONF_KEY_NAME_BIGOBJECT_PIECE_SIZE = "test.bigobject.pieceSize";
-    
+
     public static final String TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_START = "test.bigobject.readbytes.start";
-    
+
     public static final String TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_LEN = "test.bigobject.readbytes.len";
-    
+
     public static final String TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_VALUE = "test.bigobject.readbytes.value";
 
     public static final String TEST_CONF_KEY_NAME_UPLOAD_FILE_KEY = "test.upload.file.key";
-	
-	protected static Properties props = null;
 
-	public static String getLocalProperty(String key) {
+    protected static Properties props = null;
 
-		if (props != null) {
-			return props.getProperty(key);
-		}
+    public static String getLocalProperty(String key) {
 
-		return null;
-	}
+        if (props != null) {
+            return props.getProperty(key);
+        }
 
-	public static boolean hasLocalTestConfiguration() {
-		return props != null;
-	}
+        return null;
+    }
 
-	@Override
-	public void initialize(FeaturesRunner runner) throws Exception {
+    public static boolean hasLocalTestConfiguration() {
+        return props != null;
+    }
 
-		File file = null;
-		FileInputStream fileInput = null;
-		try {
-			file = FileUtils.getResourceFileFromContext(TEST_CONF_FILE);
-			fileInput = new FileInputStream(file);
-			props = new Properties();
-			props.load(fileInput);
+    @Override
+    public void initialize(FeaturesRunner runner) throws Exception {
 
-		} catch (Exception e) {
-			props = null;
-		} finally {
-			if (fileInput != null) {
-				try {
-					fileInput.close();
-				} catch (IOException e) {
-					// Ignore
-				}
-				fileInput = null;
-			}
-		}
+        File file = null;
+        FileInputStream fileInput = null;
+        try {
+            file = FileUtils.getResourceFileFromContext(TEST_CONF_FILE);
+            fileInput = new FileInputStream(file);
+            props = new Properties();
+            props.load(fileInput);
 
-		if (props == null) {
-			// Try to get environment variables
+        } catch (Exception e) {
+            props = null;
+        } finally {
+            if (fileInput != null) {
+                try {
+                    fileInput.close();
+                } catch (IOException e) {
+                    // Ignore
+                }
+                fileInput = null;
+            }
+        }
+
+        if (props == null) {
+            // Try to get environment variables
             addEnvironmentVariable(TEST_CONF_KEY_NAME_AWS_REGION);
-			addEnvironmentVariable(TEST_CONF_KEY_NAME_AWS_S3_BUCKET);
-			addEnvironmentVariable(TEST_CONF_KEY_NAME_USE_CACHE);
-			
-			addEnvironmentVariable(TEST_CONF_KEY_NAME_OBJECT_KEY);
-			addEnvironmentVariable(TEST_CONF_KEY_NAME_OBJECT_SIZE);
+            addEnvironmentVariable(TEST_CONF_KEY_NAME_AWS_S3_BUCKET);
+            addEnvironmentVariable(TEST_CONF_KEY_NAME_USE_CACHE);
+
+            addEnvironmentVariable(TEST_CONF_KEY_NAME_OBJECT_KEY);
+            addEnvironmentVariable(TEST_CONF_KEY_NAME_OBJECT_SIZE);
             addEnvironmentVariable(TEST_CONF_KEY_NAME_OBJECT_MIMETYPE);
-            
+
             addEnvironmentVariable(TEST_CONF_KEY_NAME_IMAGE_KEY);
             addEnvironmentVariable(TEST_CONF_KEY_NAME_IMAGE_SIZE);
             addEnvironmentVariable(TEST_CONF_KEY_NAME_IMAGE_MIMETYPE);
-            
+
             addEnvironmentVariable(TEST_CONF_KEY_NAME_BIGOBJECT_KEY);
             addEnvironmentVariable(TEST_CONF_KEY_NAME_BIGOBJECT_SIZE);
             addEnvironmentVariable(TEST_CONF_KEY_NAME_BIGOBJECT_MIMETYPE);
@@ -193,43 +191,95 @@ public class SimpleFeatureCustom implements RunnerFeature {
             addEnvironmentVariable(TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_START);
             addEnvironmentVariable(TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_LEN);
             addEnvironmentVariable(TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_VALUE);
-            
-			addEnvironmentVariable(TEST_CONF_KEY_NAME_UPLOAD_FILE_KEY);
-		}
 
-		if (props != null) {
-		    
-			Properties systemProps = System.getProperties();
-            systemProps.setProperty(Constants.CONF_KEY_NAME_REGION,
-                    props.getProperty(TEST_CONF_KEY_NAME_AWS_REGION));
-			systemProps.setProperty(Constants.CONF_KEY_NAME_BUCKET,
-					props.getProperty(TEST_CONF_KEY_NAME_AWS_S3_BUCKET));
-			systemProps.setProperty(Constants.CONF_KEY_NAME_USECACHEFOREXISTSKEY,
-					props.getProperty(TEST_CONF_KEY_NAME_USE_CACHE));
-			
-			systemProps.setProperty("nuxeo.aws.s3utils.minimumUploadPartSize", "0");
+            addEnvironmentVariable(TEST_CONF_KEY_NAME_UPLOAD_FILE_KEY);
+        }
+
+        if (props != null) {
+
+            Properties systemProps = System.getProperties();
+            systemProps.setProperty(Constants.CONF_KEY_NAME_REGION, props.getProperty(TEST_CONF_KEY_NAME_AWS_REGION));
+            systemProps.setProperty(Constants.CONF_KEY_NAME_BUCKET,
+                    props.getProperty(TEST_CONF_KEY_NAME_AWS_S3_BUCKET));
+            systemProps.setProperty(Constants.CONF_KEY_NAME_USECACHEFOREXISTSKEY,
+                    props.getProperty(TEST_CONF_KEY_NAME_USE_CACHE));
+
+            systemProps.setProperty("nuxeo.aws.s3utils.minimumUploadPartSize", "0");
             systemProps.setProperty("nuxeo.aws.s3utils.multipartUploadThreshold", "0");
 
-		}
-	}
+        }
+    }
 
-	@Override
-	public void stop(FeaturesRunner runner) throws Exception {
+    @Override
+    public void stop(FeaturesRunner runner) throws Exception {
 
-		Properties p = System.getProperties();
+        Properties p = System.getProperties();
         p.remove(Constants.CONF_KEY_NAME_REGION);
-		p.remove(Constants.CONF_KEY_NAME_BUCKET);
-		p.remove(Constants.CONF_KEY_NAME_USECACHEFOREXISTSKEY);
-	}
+        p.remove(Constants.CONF_KEY_NAME_BUCKET);
+        p.remove(Constants.CONF_KEY_NAME_USECACHEFOREXISTSKEY);
+    }
 
-	protected void addEnvironmentVariable(String key) {
-		String value = System.getenv(key);
-		if(value != null) {
-			if(props == null) {
-				props = new Properties();
-			}
-			props.put(key, value);
-		}
-	}
+    protected void addEnvironmentVariable(String key) {
+        String value = System.getenv(key);
+        if (value != null) {
+            if (props == null) {
+                props = new Properties();
+            }
+            props.put(key, value);
+        }
+    }
+
+    public static class BigObjectInfo {
+        public String key;
+
+        public String mimeType;
+
+        public long size;
+
+        public long pieceSize;
+
+        public long readBytesStart;
+
+        public long readBytesLen;
+
+        public String readBytesValue;
+
+        public boolean ok;
+
+        BigObjectInfo() {
+            key = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_KEY);
+            mimeType = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_MIMETYPE);
+            String sizeStr = SimpleFeatureCustom.getLocalProperty(
+                    SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_SIZE);
+            String pieceSizeStr = SimpleFeatureCustom.getLocalProperty(
+                    SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_PIECE_SIZE);
+            String readBytesStartStr = SimpleFeatureCustom.getLocalProperty(
+                    SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_START);
+            String readBytesLenStr = SimpleFeatureCustom.getLocalProperty(
+                    SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_LEN);
+            readBytesValue = SimpleFeatureCustom.getLocalProperty(
+                    SimpleFeatureCustom.TEST_CONF_KEY_NAME_BIGOBJECT_READBYTES_VALUE);
+
+            ok = !StringUtils.isAnyBlank(key, mimeType, sizeStr, pieceSizeStr, readBytesStartStr, readBytesLenStr,
+                    readBytesValue);
+
+            if (StringUtils.isNotBlank(sizeStr)) {
+                size = Long.parseLong(sizeStr);
+            }
+
+            if (StringUtils.isNotBlank(pieceSizeStr)) {
+                pieceSize = Long.parseLong(pieceSizeStr);
+            }
+
+            if (StringUtils.isNotBlank(readBytesStartStr)) {
+                readBytesStart = Long.parseLong(readBytesStartStr);
+            }
+
+            if (StringUtils.isNotBlank(readBytesLenStr)) {
+                readBytesLen = Long.parseLong(readBytesLenStr);
+            }
+        }
+
+    }
 
 }

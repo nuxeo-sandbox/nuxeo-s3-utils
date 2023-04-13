@@ -205,7 +205,7 @@ public class S3HandlerImpl implements S3Handler {
     }
 
     @Override
-    public SequenceInputStream getInputStream(String inKey, long pieceSize) throws IOException {
+    public SequenceInputStream getSequenceInputStream(String inKey, long pieceSize) throws IOException {
         
         S3ObjectSequentialStream seqStream = new S3ObjectSequentialStream(s3, currentBucket, inKey, pieceSize);
                 

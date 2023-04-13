@@ -53,6 +53,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.SequenceInputStream;
 import java.io.Serializable;
 import java.net.URI;
 import java.util.HashMap;
@@ -182,14 +184,14 @@ public class TestS3UtilsBlobProvider {
         Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?",
                 TestUtils.awsCredentialsLookOk());
 
-        // Had issue deploying the pdf2image converter in unit test working fine in live testing)
+        // Had issue deploying the pdf2image converter in unit test (working fine in live testing)
         // Issue fixed, but I still let this test here for a while.
         if (!conversionService.getRegistredConverters().contains("pdf2image")) {
             System.out.println(
                     "******************************\nConverter pdf2image not deployed in the unit test => skipping the testGetBlobImageWithDownloadThreshold test\n******************************");
             Assume.assumeTrue("Converter pdf2image not deployed", false);
         }
-        
+
         // Load test image
         String imageKey = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_IMAGE_KEY);
         Assume.assumeTrue("No image key in the configuration file", StringUtils.isNoneBlank(imageKey));
@@ -220,10 +222,9 @@ public class TestS3UtilsBlobProvider {
         Blob blob = blobProvider.readBlob(info);
         assertNotNull(blob);
 
-        File tmp = Framework.createTempFile("nxtmp-", "");
-        FileUtils.copyInputStreamToFile(blob.getStream(), tmp);
-
-        String finalMimetype = mimetypeService.getMimetypeFromFile(tmp);
+        File f = blob.getFile();
+        assertTrue(imageKeyimageSize > f.length());
+        String finalMimetype = mimetypeService.getMimetypeFromFile(f);
         assertEquals(imageMimetype, finalMimetype);
 
     }
@@ -285,25 +286,17 @@ public class TestS3UtilsBlobProvider {
         Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?",
                 TestUtils.awsCredentialsLookOk());
 
-        // Get the BlobProvider, create a ManagedBlob
+        // Get the BlobProvider
         S3UtilsBlobProvider blobProvider = (S3UtilsBlobProvider) blobManager.getBlobProvider("TestS3BlobProvider-XML");
         assertNotNull(blobProvider);
 
+        // Create the ManagedBlob and the doc
         ManagedBlob b = blobProvider.createBlobFromObjectKey(TEST_FILE_KEY);
         assertNotNull(b);
+        DocumentModel doc = TestUtils.createDocWithBlob(session, transactionalFeature, b);
 
-        // Create document, assign the blob
-        DocumentModel doc = session.createDocumentModel("/", "testfile", "File");
-        doc.setPropertyValue("file:content", (Serializable) b);
-        doc = session.createDocument(doc);
-
-        // Wait for async stuff
-        transactionalFeature.nextTransaction();
-
-        // Refresh and check
-        doc = session.getDocument(doc.getRef());
+        // Test result
         Blob docBlob = (Blob) doc.getPropertyValue("file:content");
-
         assertNotNull(docBlob);
         assertTrue(docBlob instanceof ManagedBlob);
 
@@ -326,43 +319,117 @@ public class TestS3UtilsBlobProvider {
         Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?",
                 TestUtils.awsCredentialsLookOk());
 
-        // Get the BlobProvider, create a ManagedBlob
+        // Get the BlobProvider
         S3UtilsBlobProvider blobProvider = (S3UtilsBlobProvider) blobManager.getBlobProvider(
                 "TestS3BlobProvider-withDownloadThreshold");
         assertNotNull(blobProvider);
-        
+
         // Check we have a property OK for the test
         long maxForDownload = blobProvider.getMaxForDefaultDownload();
         assertTrue(maxForDownload > 0);
         // Check it is ok with the test file
-        Assume.assumeTrue("The max threshold for download should be < " + TEST_FILE_SIZE, TEST_FILE_SIZE > maxForDownload);
-        
-        // Now we testt
+        Assume.assumeTrue("The max threshold for download should be < " + TEST_FILE_SIZE,
+                TEST_FILE_SIZE > maxForDownload);
+
+        // Create the ManagedBlob and the doc
         ManagedBlob b = blobProvider.createBlobFromObjectKey(TEST_FILE_KEY);
         assertNotNull(b);
+        DocumentModel doc = TestUtils.createDocWithBlob(session, transactionalFeature, b);
 
-        // Create document, assign the blob
-        DocumentModel doc = session.createDocumentModel("/", "testfile", "File");
-        doc.setPropertyValue("file:content", (Serializable) b);
-        doc = session.createDocument(doc);
-
-        // Wait for async stuff
-        transactionalFeature.nextTransaction();
-
-        // Refresh and check
-        doc = session.getDocument(doc.getRef());
+        // Test result
         Blob docBlob = (Blob) doc.getPropertyValue("file:content");
-
         assertNotNull(docBlob);
         assertTrue(docBlob instanceof ManagedBlob);
 
         ManagedBlob managedDocBlob = (ManagedBlob) docBlob;
         assertEquals(b.getKey(), managedDocBlob.getKey());
-        
+
         File f = managedDocBlob.getFile();
         assertTrue(f.exists());
         // The blobprovider should have returned a smaller blob.
         assertTrue(f.length() < TEST_FILE_SIZE);
+
+    }
+
+    @Test
+    @Deploy("nuxeo-s3-utils:test-s3-blobprovider.xml")
+    public void shouldStreamTheBigObject() throws Exception {
+
+        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?",
+                TestUtils.awsCredentialsLookOk());
+
+        SimpleFeatureCustom.BigObjectInfo boi = new SimpleFeatureCustom.BigObjectInfo();
+        Assume.assumeTrue("No big object info in the configuration file", boi.ok);
+
+        // Get the BlobProvider
+        S3UtilsBlobProvider blobProvider = (S3UtilsBlobProvider) blobManager.getBlobProvider("TestS3BlobProvider-XML");
+        assertNotNull(blobProvider);
+
+        // Create the ManagedBlob and the doc
+        ManagedBlob b = blobProvider.createBlobFromObjectKey(boi.key);
+        assertNotNull(b);
+        DocumentModel doc = TestUtils.createDocWithBlob(session, transactionalFeature, b);
+
+        // Test result
+        Blob docBlob = (Blob) doc.getPropertyValue("file:content");
+        assertNotNull(docBlob);
+        assertTrue(docBlob instanceof ManagedBlob);
+
+        // As of today, We can't call the getStream() method of Blob, this behavior is standard and will return a stream
+        // from a File (so, the S3 object is downloaded/cached). We must call the blobProvider custom getInputStream method
+        SequenceInputStream stream = blobProvider.getSequenceInputStream(b);
+        assertNotNull(stream);
+
+        // Here we just check we have all the good amount
+        long size = 0;
+        long bytesLength;
+        // Let's read "big" chunks
+        int buffer = 500 * 1024;
+        // Must be < pieceSize though
+        if (boi.pieceSize > 0 && buffer >= boi.pieceSize) {
+            buffer = (int) (boi.pieceSize / 2);
+        }
+        do {
+            byte bytes[] = stream.readNBytes(buffer);
+            bytesLength = bytes.length;
+            size += bytesLength;
+        } while (bytesLength > 0);
+        assertEquals(boi.size, size);
+
+    }
+    
+    @Test
+    @Deploy("nuxeo-s3-utils:test-s3-blobprovider.xml")
+    public void shouldReadBytesFromBigObject() throws Exception {
+
+        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
+        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?",
+                TestUtils.awsCredentialsLookOk());
+
+        SimpleFeatureCustom.BigObjectInfo boi = new SimpleFeatureCustom.BigObjectInfo();
+        Assume.assumeTrue("No big object info in the configuration file", boi.ok);
+
+        // Get the BlobProvider
+        S3UtilsBlobProvider blobProvider = (S3UtilsBlobProvider) blobManager.getBlobProvider("TestS3BlobProvider-XML");
+        assertNotNull(blobProvider);
+
+        // Create the ManagedBlob and the doc
+        ManagedBlob b = blobProvider.createBlobFromObjectKey(boi.key);
+        assertNotNull(b);
+        DocumentModel doc = TestUtils.createDocWithBlob(session, transactionalFeature, b);
+
+        // Test result
+        Blob docBlob = (Blob) doc.getPropertyValue("file:content");
+        assertNotNull(docBlob);
+        assertTrue(docBlob instanceof ManagedBlob);
+        
+        byte[] bytes = blobProvider.readBytes(b, boi.readBytesStart, boi.readBytesLen);
+        // Our test file is a pure text, change this unit test if it's different for you
+        assertEquals(boi.readBytesLen, bytes.length);
+        
+        String resultStr = new String(bytes);
+        assertEquals(boi.readBytesValue, resultStr);
         
     }
 
