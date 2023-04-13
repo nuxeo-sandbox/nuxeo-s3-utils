@@ -63,7 +63,7 @@ import java.util.Map;
  */
 @RunWith(FeaturesRunner.class)
 @Features({ PlatformFeature.class, SimpleFeatureCustom.class })
-@Deploy({ "nuxeo-s3-utils" })
+@Deploy("nuxeo-s3-utils")
 public class TestS3UtilsBlobProvider {
 
     @Inject
@@ -174,7 +174,7 @@ public class TestS3UtilsBlobProvider {
     }
 
     @Test
-    @Deploy("org.nuxeo.ecm.core.convert.api")
+    @Deploy("org.nuxeo.ecm.platform.commandline.executor")
     @Deploy("org.nuxeo.ecm.platform.convert")
     public void testGetBlobImageWithDownloadThreshold() throws Exception {
 
@@ -182,14 +182,14 @@ public class TestS3UtilsBlobProvider {
         Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?",
                 TestUtils.awsCredentialsLookOk());
 
-        // Sorry, giving up, I can't make the "pdf2image" converter to deploy, it sometimes fails. But in live test,
-        // it's working. So just checking it's availability.
+        // Had issue deploying the pdf2image converter in unit test working fine in live testing)
+        // Issue fixed, but I still let this test here for a while.
         if (!conversionService.getRegistredConverters().contains("pdf2image")) {
             System.out.println(
                     "******************************\nConverter pdf2image not deployed in the unit test => skipping the testGetBlobImageWithDownloadThreshold test\n******************************");
             Assume.assumeTrue("Converter pdf2image not deployed", false);
         }
-
+        
         // Load test image
         String imageKey = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_IMAGE_KEY);
         Assume.assumeTrue("No image key in the configuration file", StringUtils.isNoneBlank(imageKey));
