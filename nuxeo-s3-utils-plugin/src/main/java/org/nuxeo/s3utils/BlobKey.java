@@ -72,7 +72,7 @@ public class BlobKey {
         
         bucket = parts[1];
         objectKey = parts[2];
-        if(bucket == null || objectKey == null) {
+        if(StringUtils.isAnyBlank(bucket, objectKey)) {
             throw new NuxeoException(String.format("Blob key (%s) is missing bucket and/or object key.", fullKey));
         }
     }
@@ -95,7 +95,7 @@ public class BlobKey {
     }
     
     public boolean isValid() {
-        return bucket!= null && objectKey != null;
+        return StringUtils.isNoneBlank(bucket, objectKey);
     }
     
     public String getProviderId() {
