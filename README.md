@@ -38,34 +38,34 @@ This add-on for [Nuxeo](http://www.nuxeo.com) contains utilities for accessing o
 
 
 ## ⚠️ Important: Encryption
-The plugin does not handle custom encryption, with a client key. It reads he object from S3, so, it assumes the object is either encrypted by S3 or not encrypted (Adding a client key would not be complicated, inspiration can be taken from Nuxeo source code of the nuxeo S3 Binary Manager.)
+The plugin does not handle custom encryption, with a client key. It reads the object from S3, so, it assumes it is either encrypted by S3 or not encrypted (Adding a client key would not be complicated, inspiration can be taken from Nuxeo source code of the nuxeo S3 Binary Manager.)
 
 
 ## Set Up: Configuration
 ### Principles and Authentication
 The plugin creates:
 
-* A `S3Handler` tool, that is in charge of performing the actions (download, upload, ...).
+* A `S3Handler` tool, that is in charge of performing the actions (download, upload, ...) in buckets.
 * A `S3UtilsBlobProvider` that can be used to handle Blobs linked to an object in a S3 bucket. This BlobProvider uses a `S3Handler` for actions on the bucket. To link a Blob in Nuxeo to an object in your bucket, you will use the `S3Utils.CreateBlobFromObjectKey` operation (see below)
 
-Both connects to S3 using your credentials, a region and a bucket. In order to allow connecting to several buckets (within the same account), the plugin exposes a _service_, allowing you to access different buckets: You contribute as many S3 Handlers (and possibly several `S3UtilsBlobProvider`) as you need, given each of them a unique name.
+Both connect to S3 using your credentials, a region and a bucket. In order to allow connecting to several buckets (within the same account), the plugin exposes a _service_, allowing you to access different buckets: You contribute as many S3 Handlers (and possibly several `S3UtilsBlobProvider`) as you need, given each of them a unique name.
 
 The plugin uses Nuxeo AWS Credential code to handle authentication (the `NuxeoAWSCredentialsProvider` class), which means you must either:
 
 * Use nuxeo configuration parameters/XML extension point to set up your AWS credentials (see https://doc.nuxeo.com/nxdoc/amazon-s3-online-storage/)
 * Be already authenticated and/or you have setup the expected AWS environment variables before starting Nuxeo (or running the unit tests). This would be the case if, for example, Nuxeo is running from an EC2 instance on AWS (and this instance has permission to access the bucket(s))
 
-For example, on way to run unit tests is to (in a terminal):
+For example, one way to run unit tests is to (in a terminal):
 
 * Authenticate to AWS (like, run `aws s3 ls` and authenticate)
 * Then, run `mvn install`
 
 If Nuxeo is deployed on an EC2 instance on AWS, it automatically gets the authentication and role from the instance.
 
-**IMPORTANT**: Of course, authentication drives permission, you must make sure the account (or the EC2 instance running) has permission to download, upload, delete, ... in the bucket.
+**IMPORTANT**: Of course, authentication drives permission, you must make sure the account (or the EC2 instance running) has permission to download, upload, delete, ... in the bucket(s).
 
 ### Contribute the S3Utils Service
-Fo each S3 account and bucket you want to access, just add the following contribution to your Nuxeo Studio project (Advanced Settings > XML Extension). Values are explain below.
+Fo each S3 account and bucket you want to access, add the following contribution to your Nuxeo Studio project (Advanced Settings > XML Extension). Values are explained below.
 
 ```
 <extension target="org.nuxeo.s3utils.service" point="configuration">
@@ -89,7 +89,7 @@ Fo each S3 account and bucket you want to access, just add the following contrib
 Replace the values with yours:
 
 * `name`: Required. The unique name of your handler. To be used in some operations
-* `class`: Required. Do not change this one, keep`org.nuxeo.s3utils.S3HandlerImpl` (unless you write your own handler, see the code)
+* `class`: Required. Do not change this one, keep `org.nuxeo.s3utils.S3HandlerImpl` (unless you write your own handler, see the code)
 * `region`: Required.
   * The region (always required, even if buckets are global)
   * If this property is empty, the plugin reads the region from:
@@ -112,7 +112,7 @@ Replace the values with yours:
   * The default values suit most of cases, but if you network allows for different settings and better performance, you can change the values.
 
 ### Use `nuxeo.conf`
-It may be interesting to read the value from `nuxeo.conf`. This way, you can deploy the same Studio project in different environments (typically Dev/Test/Prod), each of them using a different set of regions and buckets.
+It may be interesting to read the values from `nuxeo.conf`. This way, you can deploy the same Studio project in different environments (typically Dev/Test/Prod), each of them using a different set of regions and buckets.
 
 For this purpose:
 
@@ -175,7 +175,7 @@ nuxeo.aws.s3utils.multipartUploadThreshold=0
     <class>org.nuxeo.s3utils.S3HandlerImpl</class>
     <region>${nuxeo.aws.s3utils.region:=}</region>
     <bucket>${mycompany.s3.bucketOne:=}</bucket>
-	 <minimumUploadPartSize>${nuxeo.aws.s3utils.minimumUploadPartSize:=}</minimumUploadPartSize>
+    <minimumUploadPartSize>${nuxeo.aws.s3utils.minimumUploadPartSize:=}</minimumUploadPartSize>
     <multipartUploadThreshold>${nuxeo.aws.s3utils.multipartUploadThreshold:=}</multipartUploadThreshold>
     <!-- Let default values for other parameters -->
   </s3Handler>
