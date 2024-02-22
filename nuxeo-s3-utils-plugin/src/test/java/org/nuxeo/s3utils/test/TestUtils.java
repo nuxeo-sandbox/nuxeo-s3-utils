@@ -105,6 +105,15 @@ public class TestUtils {
                 int index = disposition.indexOf("filename=");
                 if (index > -1) {
                     fileName = disposition.substring(index + 9);
+                } else {
+                    //attachment; filename*=UTF-8''content-for-unit-tests%2Fused-in-unit-test-do-not-change.pdf
+                    index = disposition.indexOf("filename*=");
+                    if(disposition.indexOf("filename*=") > -1) {
+                        index = disposition.lastIndexOf("%2F");
+                        if(index > 0) {
+                            fileName = disposition.substring(index + 3);
+                        }
+                    }
                 }
             } else {
                 // extracts file name from URL

@@ -20,13 +20,12 @@
 package org.nuxeo.s3utils.test;
 
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
-import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.util.UUID;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Assume;
 import org.junit.Before;
@@ -41,8 +40,6 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.s3utils.CacheForKeyExists;
 import org.nuxeo.s3utils.Constants;
 import org.nuxeo.s3utils.S3Handler;
-import org.nuxeo.s3utils.S3ObjectSequentialStream;
-import org.nuxeo.s3utils.test.SimpleFeatureCustom.BigObjectInfo;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -60,6 +57,8 @@ public class TestS3Handler {
 
     protected static String TEST_FILE_KEY;
 
+    protected static String TEST_FILE_NAME = null;
+
     protected static long TEST_FILE_SIZE = -1;
 
     protected static final String FILE_TO_UPLOAD = "Brief.pdf";
@@ -72,6 +71,8 @@ public class TestS3Handler {
             TEST_FILE_KEY = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY);
             assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY,
                     StringUtils.isNotBlank(TEST_FILE_KEY));
+            
+            TEST_FILE_NAME = FilenameUtils.getName(TEST_FILE_KEY);
 
             String sizeStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE);
             assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE,
@@ -97,7 +98,7 @@ public class TestS3Handler {
 
         String name = result.getFilename();
         long size = result.getLength();
-        assertEquals(TEST_FILE_KEY, name);
+        assertEquals(TEST_FILE_NAME, name);
         assertEquals(TEST_FILE_SIZE, size);
 
     }

@@ -21,6 +21,8 @@ package org.nuxeo.s3utils.test;
 import static org.junit.Assert.*;
 
 import java.io.File;
+
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Assume;
 import org.junit.Before;
@@ -46,6 +48,8 @@ public class TestS3TempSignedUrl {
 
     protected static String TEST_FILE_KEY;
 
+    protected static String TEST_FILE_NAME = null;
+
     protected static long TEST_FILE_SIZE = -1;
 
     protected static S3Handler s3Handler;
@@ -58,6 +62,8 @@ public class TestS3TempSignedUrl {
             TEST_FILE_KEY = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY);
             assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY,
                     StringUtils.isNotBlank(TEST_FILE_KEY));
+            
+            TEST_FILE_NAME = FilenameUtils.getName(TEST_FILE_KEY);
 
             String sizeStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE);
             assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE,
@@ -87,7 +93,7 @@ public class TestS3TempSignedUrl {
         long size = f.length();
         f.delete();
 
-        assertEquals(TEST_FILE_KEY, name);
+        assertEquals(TEST_FILE_NAME, name);
         assertEquals(TEST_FILE_SIZE, size);
 
     }

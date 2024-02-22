@@ -23,6 +23,7 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.util.UUID;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.junit.After;
@@ -71,6 +72,8 @@ public class TestOperations {
 
     protected static String TEST_FILE_KEY = null;
 
+    protected static String TEST_FILE_NAME = null;
+
     protected static String UPLOAD_KEY = null;
 
     protected static long TEST_FILE_SIZE = -1;
@@ -93,6 +96,8 @@ public class TestOperations {
             TEST_FILE_KEY = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY);
             assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY,
                     StringUtils.isNotBlank(TEST_FILE_KEY));
+            
+            TEST_FILE_NAME = FilenameUtils.getName(TEST_FILE_KEY);
 
             String sizeStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE);
             assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE,
@@ -210,7 +215,7 @@ public class TestOperations {
 
         String name = result.getFilename();
         long size = result.getLength();
-        assertEquals(TEST_FILE_KEY, name);
+        assertEquals(TEST_FILE_NAME, name);
         assertEquals(TEST_FILE_SIZE, size);
 
     }
@@ -272,7 +277,7 @@ public class TestOperations {
         // Cleanup now
         f.delete();
 
-        assertEquals(TEST_FILE_KEY, name);
+        assertEquals(TEST_FILE_NAME, name);
         assertEquals(TEST_FILE_SIZE, size);
 
     }
@@ -362,7 +367,7 @@ public class TestOperations {
         ManagedBlob b = (ManagedBlob) automationService.run(ctx, chain);
         assertNotNull(b);
 
-        assertEquals(TEST_FILE_KEY, b.getFilename());
+        assertEquals(TEST_FILE_NAME, b.getFilename());
         assertEquals(TEST_FILE_SIZE, b.getLength());
         assertEquals(TEST_FILE_MIMETYPE, b.getMimeType());
 

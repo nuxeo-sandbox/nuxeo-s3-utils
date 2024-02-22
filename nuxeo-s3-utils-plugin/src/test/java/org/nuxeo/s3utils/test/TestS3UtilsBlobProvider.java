@@ -19,6 +19,7 @@
 package org.nuxeo.s3utils.test;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -82,6 +83,8 @@ public class TestS3UtilsBlobProvider {
 
     protected static String TEST_FILE_KEY;
 
+    protected static String TEST_FILE_NAME;
+
     protected static long TEST_FILE_SIZE = -1;
 
     protected static String TEST_FILE_MIMETYPE;
@@ -98,6 +101,8 @@ public class TestS3UtilsBlobProvider {
             TEST_FILE_KEY = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY);
             assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY,
                     StringUtils.isNotBlank(TEST_FILE_KEY));
+            
+            TEST_FILE_NAME = FilenameUtils.getName(TEST_FILE_KEY);
 
             String sizeStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE);
             assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE,
@@ -262,7 +267,7 @@ public class TestS3UtilsBlobProvider {
         ManagedBlob b = blobProvider.createBlobFromObjectKey(TEST_FILE_KEY);
         assertNotNull(b);
 
-        assertEquals(TEST_FILE_KEY, b.getFilename());
+        assertEquals(TEST_FILE_NAME, b.getFilename());
         assertEquals(TEST_FILE_SIZE, b.getLength());
         assertEquals(TEST_FILE_MIMETYPE, b.getMimeType());
 
@@ -302,7 +307,7 @@ public class TestS3UtilsBlobProvider {
         File f = managedDocBlob.getFile();
         assertTrue(f.exists());
         assertEquals(TEST_FILE_SIZE, f.length());
-        assertEquals(TEST_FILE_KEY, f.getName());
+        assertEquals(TEST_FILE_NAME, f.getName());
 
     }
 

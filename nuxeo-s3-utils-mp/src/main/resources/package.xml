@@ -3,7 +3,7 @@
   <title>Nuxeo S3-Utils MP</title>
   <description>This addon contains utilities for AWS S3, including operations to upload or download a file and utilities to build a temporary signed URL for S3</description>
   <home-page>https://github.com/nuxeo-sandbox/nuxeo-s3-utils</home-page>
-  <vendor>Nuxeo</vendor>
+  <vendor>Hyland</vendor>
   <installer restart="true" />
   <uninstaller restart="true" />
   <!-- Nuxeo Validation: none | inprocess | primary_validation | nuxeo_certified -->
@@ -11,10 +11,10 @@
   <!-- Production State: production_ready | testing | proto -->
   <production-state>testing</production-state>
   <supported>false</supported>
-  <platforms>
-    <platform>lts-@NUXEO_TARGET_VERSION@</platform>
-    <platform>lts-@NUXEO_TARGET_VERSION@-HF*</platform>
-  </platforms>
+  <target-platform>
+    <name>lts</name>
+    <version>[2021.0,2024.99)</version>
+  </target-platform>
   <!-- Dependencies on other packages -->
   <!-- <dependencies> -->
   <!-- <package>another-package:1.0.0:1.0.0</package> -->
