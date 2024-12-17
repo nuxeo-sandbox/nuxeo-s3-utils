@@ -45,7 +45,7 @@ import org.nuxeo.s3utils.Constants;
 import org.nuxeo.s3utils.S3Handler;
 import org.nuxeo.s3utils.S3UtilsBlobProvider;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
