@@ -362,24 +362,21 @@ public class S3HandlerImpl implements S3Handler {
     @Override
     public boolean existsKeyInS3(String inBucket, String inKey) {
 
-        boolean exists = false;
-
-        if (StringUtils.isBlank(inBucket)) {
-            inBucket = currentBucket;
-        }
-
-        String bucket = inBucket;
+        String bucket = bucketOrCurrent(inBucket);
         try {
             s3.headObject(b -> b.bucket(bucket).key(inKey));
-            exists = true;
+            return true;
         } catch (SdkException e) {
-            if (!S3Handler.errorIsMissingKey(e)) {
-                // Something else happened
-                exists = true;
+            if (S3Handler.errorIsMissingKey(e)) {
+                return false;
             }
+            /*
+             * The check itself failed: no permission, no such bucket, network error, ... Returning true here, as this
+             * code used to do, tells the caller the object exists when we simply could not find out, and a caller that
+             * skips an upload when the key exists would then lose data.
+             */
+            throw new NuxeoException(S3Handler.buildDetailedMessageFromAWSException(e), e);
         }
-
-        return exists;
     }
 
     @Override

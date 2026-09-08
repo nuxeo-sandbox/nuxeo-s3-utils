@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -44,6 +45,7 @@ import org.nuxeo.ecm.automation.OperationContext;
 import org.nuxeo.ecm.automation.OperationException;
 import org.nuxeo.ecm.automation.test.AutomationFeature;
 import org.nuxeo.ecm.core.api.Blob;
+import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.api.impl.blob.FileBlob;
@@ -319,6 +321,30 @@ public class TestOperations {
         str = obj.getString("ETag");
         assertTrue(StringUtils.isNoneBlank(str));
 
+    }
+
+    /**
+     * Regression test: a blob that is not backed by a file, a string blob or a stream for instance, used to be
+     * silently ignored. Nothing was uploaded, no error was raised, and the chain went on believing the object was on
+     * S3.
+     *
+     * @since 2025.1
+     */
+    @Test
+    public void uploadMustFailWhenTheBlobHasNoFile() throws Exception {
+        TestUtils.assumeAwsIsAvailable();
+
+        Blob noFileBlob = Blobs.createBlob("Some content, held in memory, with no backing file");
+        noFileBlob.setFilename("in-memory.txt");
+        assertNull("This test needs a blob with no backing file", noFileBlob.getFile());
+
+        OperationContext ctx = new OperationContext(coreSession);
+        ctx.setInput(noFileBlob);
+        OperationChain chain = new OperationChain("uploadWithNoFile");
+        chain.add(S3UploadOp.ID).set("key", "must-never-be-created-" + UUID.randomUUID());
+
+        // NuxeoException is unchecked, Automation lets it through rather than wrapping it
+        assertThrows(NuxeoException.class, () -> automationService.run(ctx, chain));
     }
 
     /**

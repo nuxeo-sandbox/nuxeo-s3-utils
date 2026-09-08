@@ -62,7 +62,23 @@ public class S3HandlerServiceImpl extends DefaultComponent implements S3HandlerS
     @Override
     public void deactivate(ComponentContext context) {
         super.deactivate(context);
+        /*
+         * Every handler holds an S3Client, a CRT S3AsyncClient and an S3TransferManager. Only S3Handler#cleanup closes
+         * them, so not calling it here leaks the AWS clients, their thread pools and the CRT native resources on every
+         * shutdown and on every hot reload.
+         */
+        cleanupAllHandlers();
         contributions.clear();
+    }
+
+    /**
+     * Releases every handler built so far, and forgets them.
+     *
+     * @since 2025.1
+     */
+    protected synchronized void cleanupAllHandlers() {
+        s3Handlers.values().forEach(S3Handler::cleanup);
+        s3Handlers.clear();
     }
 
     @Override
@@ -87,13 +103,24 @@ public class S3HandlerServiceImpl extends DefaultComponent implements S3HandlerS
         }
     }
 
-    protected void registerS3Handler(S3HandlerDescriptor desc) {
-        contributions.put(desc.getName(), desc);
+    protected synchronized void registerS3Handler(S3HandlerDescriptor desc) {
+        String name = desc.getName();
+        contributions.put(name, desc);
+        /*
+         * A contribution may override an already registered one, which is how a Studio project customizes the
+         * "default" handler. getS3Handler only builds a handler when it has none cached, so the previously built one
+         * must be released here, otherwise the override is silently ignored and the old bucket and region keep being
+         * used.
+         */
+        S3Handler previous = s3Handlers.remove(name);
+        if (previous != null) {
+            previous.cleanup();
+        }
         // lookup now to have immediate feedback on error
-        getS3Handler(desc.getName());
+        getS3Handler(name);
     }
 
-    protected void unregisterS3Handler(S3HandlerDescriptor desc) {
+    protected synchronized void unregisterS3Handler(S3HandlerDescriptor desc) {
         contributions.remove(desc.getName());
         S3Handler handler = s3Handlers.get(desc.getName());
         if(handler != null) {

@@ -61,20 +61,26 @@ public class BlobKey {
      */
     public BlobKey(String blobProviderId, String fullKey) {
 
-        if(StringUtils.isBlank(fullKey) || !fullKey.startsWith(blobProviderId)) {
+        // The trailing ":" matters, without it provider "S3" would accept a key belonging to provider "S3Archive"
+        if (StringUtils.isBlank(fullKey) || !fullKey.startsWith(blobProviderId + ":")) {
             throw new NuxeoException(
                     "Blob key (%s) does not match this provider (%s).".formatted(fullKey, blobProviderId));
         }
 
-        String[] parts = fullKey.split(":");
-        if(parts.length != 3) {
+        /*
+         * Split in 3 parts at most: an S3 object key may legitimately contain ":", and an unbounded split would then
+         * produce more than 3 parts and reject a perfectly valid key.
+         */
+        String[] parts = fullKey.split(":", 3);
+        if (parts.length != 3) {
             throw new NuxeoException(
                     "Blob key (%s) is malformatted. Should be providerId:bucket:objectKey.".formatted(fullKey));
         }
 
+        this.blobProviderId = parts[0];
         bucket = parts[1];
         objectKey = parts[2];
-        if(StringUtils.isAnyBlank(bucket, objectKey)) {
+        if (StringUtils.isAnyBlank(bucket, objectKey)) {
             throw new NuxeoException("Blob key (%s) is missing bucket and/or object key.".formatted(fullKey));
         }
     }
@@ -91,7 +97,7 @@ public class BlobKey {
     BlobKey(String blobProviderId, String fullKey, String expectedBucket) {
 
         this(blobProviderId, fullKey);
-        if(!bucket.equals(expectedBucket)) {
+        if (!bucket.equals(expectedBucket)) {
             throw new NuxeoException(
                     "Bucket (%s) in the key (%s) does not match %s".formatted(bucket, fullKey, expectedBucket));
         }

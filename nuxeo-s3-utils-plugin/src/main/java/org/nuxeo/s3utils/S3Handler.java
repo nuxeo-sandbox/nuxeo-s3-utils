@@ -426,6 +426,10 @@ public interface S3Handler extends S3ObjectStreaming {
     public static boolean errorIsMissingKey(SdkException e) {
         if (e instanceof AwsServiceException ase) {
             String errorCode = ase.awsErrorDetails() == null ? null : ase.awsErrorDetails().errorCode();
+            if ("NoSuchBucket".equals(errorCode)) {
+                // AWS answers 404 for a missing bucket too, but that is a configuration error, not a missing key
+                return false;
+            }
             return ase.statusCode() == 404 || "NoSuchKey".equals(errorCode) || "NotFound".equals(errorCode)
                     || "Not Found".equals(e.getMessage());
         }

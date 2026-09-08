@@ -35,6 +35,15 @@ Two behaviour notes:
 * `S3UtilsBlobProvider` now sets the blob digest from the object **ETag**. The v1 code used `getContentMD5()`, which a `HEAD` response practically never returns (so the digest used to be `null` most of the time).
 * `minimumUploadPartSize` / `multipartUploadThreshold` set to `0` still means "use the AWS defaults", but the plugin now substitutes those defaults itself (5MB / 16MB) because the SDK v2 CRT client rejects `0`.
 
+### Behaviour fixes in 2025.x
+
+A few long standing bugs were fixed. They change what some chains observe:
+
+* **The `bucket` parameter no longer leaks.** It used to be applied with `S3Handler#setBucket`, which permanently repointed the handler. Since a handler is a singleton shared by every caller, one operation using an explicit bucket silently redirected all the following ones, including `S3Utils.GetObjectMetadata`, which has no `bucket` parameter. The bucket is now passed per call. If your Java code relied on `setBucket` to configure a handler for the next calls, use the new `sendFile(bucket, ...)`, `downloadFile(bucket, ...)` and `deleteFile(bucket, ...)` overloads instead.
+* **A failed existence check now raises an error.** `S3Utils.KeyExists` and `S3Handler#existsKeyInS3` used to answer `true` when the check itself failed, for instance on an access denied or a network error, which is indistinguishable from "the object is there". They now throw. A missing key still answers `false`.
+* **`S3Utils.Upload` fails instead of doing nothing** when the blob is not backed by a file, for instance an in memory string blob. It used to return successfully without uploading anything.
+* **Overriding a handler contribution works.** Contributing a handler name that already exists, the usual way to customize the `default` handler from a Studio project, used to be ignored: the previously built handler kept being used with its old bucket and region.
+
 # Table of Content
 - [Compatibility](#compatibility)
   * [Upgrading from 3.x (LTS 2023) to 2025.x](#upgrading-from-3x-lts-2023-to-2025x)

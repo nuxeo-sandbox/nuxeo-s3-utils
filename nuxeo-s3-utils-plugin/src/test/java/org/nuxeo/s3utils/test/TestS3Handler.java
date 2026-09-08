@@ -157,6 +157,24 @@ public class TestS3Handler {
         assertTrue(StringUtils.isNoneBlank(part.asText()));
     }
 
+    /**
+     * Regression test: a contribution overriding an already registered handler, which is how a Studio project
+     * customizes a handler shipped by the plugin, was silently ignored. getS3Handler only builds a handler when it has
+     * none cached, so registering a name again kept serving the handler built from the first descriptor, with its old
+     * bucket and region.
+     *
+     * @since 2025.1
+     */
+    @Test
+    @Deploy("nuxeo-s3-utils:test-s3-handler-override.xml")
+    public void handlerContributionOverrideMustBeApplied() throws Exception {
+        TestUtils.assumeAwsIsAvailable();
+
+        S3Handler overridden = S3Handler.getS3Handler("test-override-handler");
+        assertNotNull(overridden);
+        assertEquals("bucket-set-by-the-overriding-contribution", overridden.getBucket());
+    }
+
     @Test
     public void testExistsKeyInS3() throws Exception {
 

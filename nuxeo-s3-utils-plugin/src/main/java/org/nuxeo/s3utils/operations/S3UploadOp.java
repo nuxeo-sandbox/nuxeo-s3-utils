@@ -85,16 +85,23 @@ public class S3UploadOp {
     @OperationMethod
     public Blob run(Blob blob) throws NuxeoException, IOException {
 
-        if (blob != null) {
-
-            setup();
-
-            File f = blob.getFile();
-            if (f != null) {
-                // Never setBucket() here: the handler is a singleton shared by every caller
-                s3Handler.sendFile(bucket, key, f);
-            }
+        if (blob == null) {
+            throw new NuxeoException("No blob to upload to S3 with key " + key + ".");
         }
+
+        setup();
+
+        File f = blob.getFile();
+        if (f == null) {
+            /*
+             * A blob that is not backed by a file (a string blob, a stream, ...) used to be silently ignored: no
+             * upload, no error, and the chain would believe the object was on S3.
+             */
+            throw new NuxeoException("The blob to upload with key " + key
+                    + " is not backed by a file, it cannot be sent to S3.");
+        }
+        // Never setBucket() here: the handler is a singleton shared by every caller
+        s3Handler.sendFile(bucket, key, f);
 
         return blob;
     }
@@ -106,8 +113,12 @@ public class S3UploadOp {
 
             setup();
 
-            Blob b = (Blob) doc.getPropertyValue(xpath);
-            run(b);
+            Object value = doc.getPropertyValue(xpath);
+            if (value != null && !(value instanceof Blob)) {
+                throw new NuxeoException(
+                        "The property " + xpath + " of document " + doc.getId() + " does not hold a blob.");
+            }
+            run((Blob) value);
 
         }
         return doc;

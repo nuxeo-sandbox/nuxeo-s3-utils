@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<component name="nuxeo.s3.utils.test.s3handleroverride" version="1.0">
+
+  <!--
+    Two contributions for the same handler name, which is how a Studio project customizes a handler contributed by
+    the plugin. The second one must win: registering a name that is already built has to release the previously
+    built handler, otherwise the override is silently ignored.
+  -->
+  <extension target="org.nuxeo.s3utils.service" point="configuration">
+    <s3Handler>
+      <name>test-override-handler</name>
+      <class>org.nuxeo.s3utils.S3HandlerImpl</class>
+      <region>${nuxeo.aws.s3utils.region:=}</region>
+      <bucket>bucket-set-by-the-first-contribution</bucket>
+      <minimumUploadPartSize>0</minimumUploadPartSize>
+      <multipartUploadThreshold>0</multipartUploadThreshold>
+    </s3Handler>
+  </extension>
+
+  <extension target="org.nuxeo.s3utils.service" point="configuration">
+    <s3Handler>
+      <name>test-override-handler</name>
+      <class>org.nuxeo.s3utils.S3HandlerImpl</class>
+      <region>${nuxeo.aws.s3utils.region:=}</region>
+      <bucket>bucket-set-by-the-overriding-contribution</bucket>
+      <minimumUploadPartSize>0</minimumUploadPartSize>
+      <multipartUploadThreshold>0</multipartUploadThreshold>
+    </s3Handler>
+  </extension>
+
+</component>
