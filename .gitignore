@@ -26,4 +26,5 @@ dependency-tree.log
 nashorn_code_cache
 
 # Specific ignores
+AGENTS.md
 aws-test.conf
