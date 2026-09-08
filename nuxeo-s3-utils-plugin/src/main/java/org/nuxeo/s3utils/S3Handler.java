@@ -262,16 +262,23 @@ public interface S3Handler extends S3ObjectStreaming {
 
     /**
      * Gets the object metadata without fetching the object itself.
-     * Values returned are whatever is stored as system metadata,
-     * such as "Content-Type", "Content-Length", "ETag", ...
-     * _plus_ the following properties:
+     * <p>
+     * Values returned are the system metadata, using HTTP header style names ("Content-Type", "Content-Length",
+     * "ETag", "Last-Modified", "x-amz-version-id", ...), _plus_ the following properties:
      * <ul>
-     * <li>"bucket": the bucket name (same as the one defined for the S3Handler)</li>
+     * <li>"bucketName": the bucket name (same as the one defined for the S3Handler)</li>
      * <li>"objectKey": the object key (same as the inKey parameter)</li>
      * <li>"userMetadata": An object holding the user metadata ({} if no user metadata). All values are String.</li>
      * </ul>
-     * If AWS returns a "not found" error, the method returns null and adds a WARN to the log. Any other error is thrown
-     * 
+     * A metadata that is not set on the object is not returned by AWS, and is then simply absent from the result.
+     * <p>
+     * <b>WARNING</b>: The AWS SDK v2 has no equivalent of the v1 <code>ObjectMetadata#getRawMetadata()</code>, so this
+     * map is built explicitly. The key names above are part of the contract, callers rely on them.
+     * <p>
+     * If the key does not exist, or on any other AWS error, a NuxeoException is thrown (see
+     * {@link #getObjectMetadata(String)}). Callers who want an empty result instead, as the
+     * <code>S3Utils.GetObjectMetadata</code> operation does, must catch it.
+     *
      * @param inKey
      * @return a JsonNode of all the metadata, including userMetadata
      * @throws JsonProcessingException

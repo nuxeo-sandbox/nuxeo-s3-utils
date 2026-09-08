@@ -41,7 +41,7 @@ import org.nuxeo.s3utils.S3Handler;
  *
  * @since 9.10
  */
-@Operation(id = S3KeyExistsOp.ID, category = Constants.CAT_BLOB, label = "S3 Utils: Key Exists", description = "Return a Boolean in a the s3UtilsTempSignedUrl context variable, depending if the key exists in the bucket or not. Set useCache to true to use the cache if the S3Handler configuraiton allows for it.")
+@Operation(id = S3KeyExistsOp.ID, category = Constants.CAT_BLOB, label = "S3 Utils: Key Exists", description = "Return a Boolean in a the s3UtilsKeyExists context variable, depending if the key exists in the bucket or not. Set useCache to true to use the cache if the S3Handler configuration allows for it.")
 public class S3KeyExistsOp {
 
     public static final String ID = "S3Utils.KeyExists";

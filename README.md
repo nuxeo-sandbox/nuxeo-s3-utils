@@ -17,6 +17,8 @@ This add-on for [Nuxeo](http://www.nuxeo.com) contains utilities for accessing o
 | `2025.x`       | LTS 2025  | v2 (`software.amazon.awssdk`) |
 | `3.x`          | LTS 2023  | v1 (`com.amazonaws`) — see the `lts2023` branch |
 
+Requirements to build: **Java 21** and Maven. The current version builds against `org.nuxeo:nuxeo-parent:2025.22`, and the AWS SDK version is the one managed by that parent (never pin it yourself).
+
 ## Upgrading from 3.x (LTS 2023) to 2025.x
 
 LTS 2025 moved Nuxeo to the AWS SDK v2, so the Java API of this plugin had to follow. **XML contributions, `nuxeo.conf` parameters and automation operations are unchanged** — only Java callers are impacted:
@@ -34,6 +36,8 @@ Two behaviour notes:
 * `minimumUploadPartSize` / `multipartUploadThreshold` set to `0` still means "use the AWS defaults", but the plugin now substitutes those defaults itself (5MB / 16MB) because the SDK v2 CRT client rejects `0`.
 
 # Table of Content
+- [Compatibility](#compatibility)
+  * [Upgrading from 3.x (LTS 2023) to 2025.x](#upgrading-from-3x-lts-2023-to-2025x)
 - [Important: Encryption](#important-encryption)
 - [Set Up: Configuration](#set-up-configuration)
   * [Principles and Authentication](#principles-and-authentication)
@@ -61,7 +65,7 @@ Two behaviour notes:
 - [Running the Unit Tests](#running-the-unit-tests)
 - [Licensing](#licensing)
 - [Support](#support)
-- [About Hyland-Nuxeo](#about-nuxeo)
+- [About Nuxeo](#about-nuxeo)
 
 
 
@@ -76,7 +80,7 @@ The plugin creates:
 * A `S3Handler` tool, that is in charge of performing the actions (download, upload, ...) in buckets.
 * A `S3UtilsBlobProvider` that can be used to handle Blobs linked to an object in a S3 bucket. This BlobProvider uses a `S3Handler` for actions on the bucket. To link a Blob in Nuxeo to an object in your bucket, you will use the `S3Utils.CreateBlobFromObjectKey` operation (see below)
 
-Both connect to S3 using your credentials, a region and a bucket. In order to allow connecting to several buckets (within the same account), the plugin exposes a _service_, allowing you to access different buckets: You contribute as many S3 Handlers (and possibly several `S3UtilsBlobProvider`) as you need, given each of them a unique name.
+Both connect to S3 using your credentials, a region and a bucket. In order to allow connecting to several buckets (within the same account), the plugin exposes a _service_, allowing you to access different buckets: You contribute as many S3 Handlers (and possibly several `S3UtilsBlobProvider`) as you need, giving each of them a unique name.
 
 The plugin uses Nuxeo AWS Credential code to handle authentication (the `NuxeoAWSCredentialsProvider` class), which means you must either:
 
@@ -90,7 +94,7 @@ To run the unit tests, see [Running the Unit Tests](#running-the-unit-tests).
 **IMPORTANT**: Of course, authentication drives permission, you must make sure the account (or the EC2 instance running) has permission to download, upload, delete, ... in the bucket(s).
 
 ### Contribute the S3Utils Service
-Fo each S3 account and bucket you want to access, add the following contribution to your Nuxeo Studio project (Advanced Settings > XML Extension). Values are explained below.
+For each S3 account and bucket you want to access, add the following contribution to your Nuxeo Studio project (Advanced Settings > XML Extension). Values are explained below.
 
 ```
 <extension target="org.nuxeo.s3utils.service" point="configuration">
@@ -120,7 +124,7 @@ Replace the values with yours:
   * If this property is empty, the plugin reads the region from:
     * The `nuxeo.aws.s3utils.region` configuration parameter
     * If empty, reads from Nuxeo AWS configuration
-    * If still empty, reads from the `nuxeo.aws.region` confifguration parameter
+    * If still empty, reads from the `nuxeo.aws.region` configuration parameter
 * `bucket`: Required. The bucket to use for this S3 account.
 * `tempSignedUrlDuration`: Optional.
   * The duration, in seconds, of a temporary signed URL.
@@ -229,7 +233,7 @@ Now, we can use the "S3-Bucket-one" or the "S3-Bucket-Two" handlers.
 ⚠️ In this example, we don't set the values for the `default` handler ⚠️
 
 * It cannot be used (using it will fail, no bucket is defined in `nuxeo.aws.s3utils.bucket`)
-* See below: You must pass the correct handler name to the mmisc. operation you will be using.
+* See below: You must pass the correct handler name to each operation you will be using.
 
 ## Features
 * Operations
@@ -250,7 +254,7 @@ The plugin contributes the following operations to be used in an Automation Chai
   * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
   * `key`: The key to use for S3 storage
   * `xpath`: When the input is `Document`, the field to use. Default value is the main blob, `file:content`.
-* *Notice* Upload uses Amazon `TransferManager` and will perform multipart uploads depending on the values set in the configuration (`minimumUploadPartSize`  and `multipartUploadThreshold`). See explanations above.
+* *Notice* Upload uses the AWS SDK v2 `S3TransferManager` and will perform multipart uploads depending on the values set in the configuration (`minimumUploadPartSize` and `multipartUploadThreshold`). See explanations above.
 
 #### `S3Utils.Download`
 * Label: `Files > S3 Utils: Download`
@@ -259,7 +263,7 @@ The plugin contributes the following operations to be used in an Automation Chai
   * `handlerName`: The name of the S3Handler to use (see examples above)
   * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
   * `key`: The key of the file on S3
-* *Notice* Download uses Amazon `TransferManager` and will perform multipart downloads when possible.
+* *Notice* Download uses the AWS SDK v2 `S3TransferManager` and will perform multipart downloads when possible. Note that `minimumUploadPartSize` and `multipartUploadThreshold` only apply to uploads.
 
 
 #### `S3Utils.Delete`
@@ -292,7 +296,7 @@ The plugin contributes the following operations to be used in an Automation Chai
   * `durationInSeconds`: Optional, default is set to the value found in the S3Handler configuration.
   * `contentType`: Optional, String.
   * `contentDisposition`: Optional, String.<br/>
-      `contentType` and `contentDisposition` are optional but it is recommended to set them to make sure the is no ambiguity when the URL is used (a key without a file extension for example)
+      `contentType` and `contentDisposition` are optional but it is recommended to set them to make sure there is no ambiguity when the URL is used (a key without a file extension for example)
 
 #### `S3Utils.GetObjectMetadata`
 * Label: `Files > S3 Utils: Get Object Metadata`
@@ -302,10 +306,27 @@ The plugin contributes the following operations to be used in an Automation Chai
   * `key`: The key of the file on S3 (required)
   * `handlerName`: The name of the S3Handler to use. Optional.
 * **IMPORTANT**: If `key` is not found, returns an empty object (`{}`)
-* Else, returns:
-  * The system metadata ("Content-Type", "Content-Length", "ETag", ...)
-  * Plus some other properties: `"bucket"`, `"key"` and `"userMetadata"`, which is a Json object (can be empty) holding all the user metadata for the object.
-* Notice: When a metadata is not set, it is not returned by AWS (for example, Content-Encoding, of md5 are not always there)
+* Else, returns the system metadata, using HTTP header style names, plus three properties added by the plugin:
+
+| Property | Notes |
+| -------- | ----- |
+| `Content-Length` | |
+| `Content-Type` | |
+| `ETag` | Returned without the surrounding double quotes |
+| `Content-Encoding` | |
+| `Content-Disposition` | |
+| `Content-Language` | |
+| `Cache-Control` | |
+| `Last-Modified` | |
+| `Expires` | |
+| `x-amz-version-id` | |
+| `x-amz-storage-class` | |
+| `x-amz-server-side-encryption` | |
+| `bucketName` | Added by the plugin: the bucket the object was read from |
+| `objectKey` | Added by the plugin: the `key` parameter |
+| `userMetadata` | Added by the plugin: a Json object, possibly empty, holding all the user metadata of the object |
+
+* Notice: When a metadata is not set, AWS does not return it, so the property is simply absent from the result (`Content-Encoding` for example is not always there)
 
 #### `S3Utils.CreateBlobFromObjectKey`
 * Label: `Files > S3 Utils: Create Blob from Object Key`
@@ -328,7 +349,7 @@ You can find an example here: https://doc.nuxeo.com/nxdoc/how-to-use-pdf-convers
 Or you can use [Nuxeo CLI](https://doc.nuxeo.com/nxdoc/nuxeo-cli/) for this purpose, it can create the registry entries for you.
 
 #### How to Tune the REST Filtering
-The opérations that are filtered for REST calls and restricted to administrators are listed in the `s3-utils-operations.xml` file. We are using the recommended mechanism for the filtering, as described [here](https://doc.nuxeo.com/nxdoc/filtering-exposed-operations/), and the `s3-utils-operations.xml` contains the following:
+The operations that are filtered for REST calls and restricted to administrators are listed in the `s3-utils-operations.xml` file. We are using the recommended mechanism for the filtering, as described [here](https://doc.nuxeo.com/nxdoc/filtering-exposed-operations/), and the `s3-utils-operations.xml` contains the following:
 
 ```
 <component name="org.nuxeo.s3-utils.operations">
@@ -380,23 +401,23 @@ To use the provider, you must just contribute the BlobManager as in the followin
 
 * `class` is required and must be exactly `org.nuxeo.s3utils.S3UtilsBlobProvider`
 * `cacheSize`, `cacheCount` and `cacheMinAge`: Optional. Handle the file cache, so when a file is downloaded from s3, it is cached, so if it is required later, it is already there.
-  * The cache is a LRU cache (Least Recent Update cache), and default values are "100 MB" for `cacheSize`, "10000" for `cacheCount`, and one hour ("3600") for `cacheMinAge`
+  * The cache is a LRU cache (Least Recently Used), and default values are "100 MB" for `cacheSize`, "10000" for `cacheCount`, and one hour ("3600") for `cacheMinAge`
 * `s3Handler`: optional. The name of the related `S3Handler`. It will be used to get the bucket and authentication etc. Not passed => use the default handler.
 * `noDefaultDownloadAbove`: Optional.
-  * A number, in bytes, above which the action of downloading the blob will actually not download it, but download a place holder instead, containing just the basic info (file name, file size, mime type). These infos will be returned in a blob, trying to match the mime-ype of the original object, but it can't obviously be always relevant. Handled mime types are text/plain, application/pdf and image/jpeg-png.
+  * A number, in bytes, above which the action of downloading the blob will actually not download it, but download a place holder instead, containing just the basic info (file name, file size, mime type). These infos will be returned in a blob, trying to match the mime-type of the original object, but it can't obviously be always relevant. Handled mime types are `text/plain`, `application/pdf`, `image/jpeg` and `image/png`.
   * So, **warning**:
     * thumbnail and full text index will of course not reflect the content of the distant file
     * Errors could occur in the log when Nuxeo tries to get a thumbnail/extract fulltext
   * The main goal of this parameter is to handle big files on S3, to avoid downloading them locally for handling of thumbnails and renditions.
-  * Notice you can always handle the thumbnail yourself (Add the `Thumbnail` facet and set an image to `thumb:thumb`for example), the preview (tune your nuxeo-yourdoc-view-layout to display something relevant, etc.
+  * Notice you can always handle the thumbnail yourself (add the `Thumbnail` facet and set an image to `thumb:thumb` for example), or the preview (tune your nuxeo-yourdoc-view-layout to display something relevant), etc.
 
 
 ### Java Features
 
 #### Streaming an Object
-Both the `S3HandlerImpl` and the `S3UtilsBlobProvider` classes allow for _streaming_ an object form S3. This can be very useful when you don't want/don't need to actually download it. Both classes allow for streaming the whole object or a range.
+Both the `S3HandlerImpl` and the `S3UtilsBlobProvider` classes allow for _streaming_ an object from S3. This can be very useful when you don't want/don't need to actually download it. Both classes allow for streaming the whole object or a range.
 
-Please, see the code and its JavaDoc for details, `S3ObjectStreaming` interface and the `getInputStream`and `readBytes` methods.
+Please, see the code and its JavaDoc for details, the `S3ObjectStreaming` interface and its `getSequenceInputStream` and `readBytes` methods.
 
 These features are not available without explicitly calling them in Java though. For example, Nuxeo BlobProvider interface does not handle streaming, so Nuxeo will never try to get a stream from a S3 blob. The purpose of these classes is to allow our prospects/customers (with Java dev. skills of course) to use this code, either as is (as a maven dependency), or by forking it or just copy/pasting the relevant part, to be included in their own plugin(s).
 
@@ -438,7 +459,26 @@ The NuxeoPackage is in `nuxeo-s3-utils-mp/target`, named `nuxeo-s3-utils-mp-{ver
 
 ## Running the Unit Tests
 
-The tests run against a **real S3 bucket**: there is no mock and no emulator. They need two independent things, the test data configuration and the AWS credentials.
+The tests run against a **real S3 bucket**: there is no mock and no emulator. They need two independent things: the test data configuration, and the AWS credentials.
+
+### Quick start
+
+```bash
+# 1. Configure the test data, then edit aws-test.conf with your bucket and objects
+cp nuxeo-s3-utils-plugin/src/test/resources/aws-test.conf.sample \
+   nuxeo-s3-utils-plugin/src/test/resources/aws-test.conf
+
+# 2. Authenticate to AWS. REQUIRED, or every S3 test is silently skipped
+aws sso login
+
+# 3. Run the tests
+mvn clean install -Ds3utils.test.requireAws=true
+```
+
+> [!WARNING]
+> **An AWS SSO session expires** (after a few hours, depending on your configuration). When it does, the tests are **skipped, not failed**, and the build stays green. If you see `Skipped: 28`, run `aws sso login` again. Using `-Ds3utils.test.requireAws=true`, as above, turns that skip into an explicit failure so you cannot miss it.
+
+The two steps are detailed below.
 
 ### 1. The configuration file
 
@@ -467,12 +507,12 @@ Alternatively, and typically for a CI job, every key can be provided as an **env
 
 Credentials never appear in `aws-test.conf`. The plugin uses `NuxeoAWSCredentialsProvider`, which falls back to the standard AWS credentials chain, so anything that authenticates the AWS CLI works. Pick one:
 
-* `aws sso login`, then run the tests in the same terminal
-* `AWS_PROFILE=my-profile mvn test`, if you have several profiles
+* **AWS SSO, the most common case**: run `aws sso login`, then run the tests **from the same terminal**. Remember the session expires, see the warning above.
+* `AWS_PROFILE=my-profile mvn test`, if you have several profiles. The profile is *not* set in `aws-test.conf`, only through this standard AWS variable.
 * The usual `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (/ `AWS_SESSION_TOKEN`) environment variables
 * Nothing at all when running on an EC2 instance whose role can access the bucket
 
-A quick way to check you are authenticated: `aws s3 ls s3://your-bucket` must succeed.
+Whatever you choose, the account must be allowed to read, upload and delete in the bucket. To check that you are authenticated, `aws s3 ls s3://your-bucket` must succeed.
 
 > **Note about AWS SSO**: unlike the v1 SDK, the AWS SDK v2 can only resolve an SSO profile when the `software.amazon.awssdk:sso` and `ssooidc` modules are on the classpath. They are declared as `test` scope dependencies in `nuxeo-s3-utils-plugin/pom.xml` for exactly this reason. They are deliberately *not* shipped in the Marketplace Package, since a server authenticates with a role or with static credentials.
 
@@ -480,7 +520,7 @@ A quick way to check you are authenticated: `aws s3 ls s3://your-bucket` must su
 
 ```
 cd /path/to/nuxeo-s3-utils
-mvn clean install
+mvn clean install -Ds3utils.test.requireAws=true
 ```
 
 ### IMPORTANT: a green build does not mean the tests ran
@@ -524,4 +564,4 @@ The source code, documentation, roadmap, issue tracker, testing, benchmarks are 
 
 Typically, Nuxeo users build different types of information management solutions for [document management](https://www.nuxeo.com/solutions/document-management/), [case management](https://www.nuxeo.com/solutions/case-management/), and [digital asset management](https://www.nuxeo.com/solutions/dam-digital-asset-management/), use cases. It uses schema-flexible metadata & content models that allows content to be repurposed to fulfill future use cases.
 
-More information is available at [www.hyland.copm](https://www.hyland.com).
+More information is available at [www.hyland.com](https://www.hyland.com).
