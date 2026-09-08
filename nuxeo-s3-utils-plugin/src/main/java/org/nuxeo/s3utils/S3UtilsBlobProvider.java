@@ -26,8 +26,6 @@ import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.io.Serializable;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,6 +33,7 @@ import java.util.Optional;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.nuxeo.common.file.FileCache;
@@ -181,24 +180,29 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
     @Override
     public File getFile(ManagedBlob blob) {
 
-        File f = null;
         try {
-            f = getFileFromCache(blob);
-            // Files in the cache have their name set as the ETag, we must
-            // change this.
-            String path = FilenameUtils.getPath(f.getAbsolutePath());
-            if (path.lastIndexOf("/") < 0) {
-                path += "/";
+            File cachedFile = getFileFromCache(blob);
+            /*
+             * Files in the cache are named after the ETag, callers expect the blob file name. We copy the cached file
+             * to a dedicated temporary directory. We must never move it: moving would take the file away from the LRU
+             * cache (every call would download the object again), would leave the renamed file behind, and two blobs
+             * sharing the same file name would overwrite each other.
+             */
+            String fileName = FilenameUtils.getName(blob.getFilename());
+            if (StringUtils.isBlank(fileName)) {
+                fileName = cachedFile.getName();
             }
-            Path source = Paths.get(f.getAbsolutePath());
-            Path result = Files.move(source, source.resolveSibling(blob.getFilename()),
-                    StandardCopyOption.REPLACE_EXISTING);
-            f = result.toFile();
+            File dir = Framework.createTempDirectory("s3utilsblob-").toFile();
+            File result = new File(dir, fileName);
+            Files.copy(cachedFile.toPath(), result.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            // Let Nuxeo delete the copy once the caller has released it
+            Framework.trackFile(result, result);
+
+            return result;
 
         } catch (IOException e) {
             throw new NuxeoException("Error getting a file for blob key " + blob.getKey(), e);
         }
-        return f;
     }
 
     public SequenceInputStream getSequenceInputStream(ManagedBlob blob) throws IOException {

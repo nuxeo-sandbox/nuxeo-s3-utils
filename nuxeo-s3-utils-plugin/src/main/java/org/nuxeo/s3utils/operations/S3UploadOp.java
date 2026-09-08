@@ -76,10 +76,6 @@ public class S3UploadOp {
             s3Handler = S3Handler.getS3Handler(handlerName);
         }
 
-        if (StringUtils.isNotBlank(bucket)) {
-            s3Handler.setBucket(bucket);
-        }
-
         if (StringUtils.isBlank(xpath)) {
             xpath = "file:content";
         }
@@ -95,8 +91,8 @@ public class S3UploadOp {
 
             File f = blob.getFile();
             if (f != null) {
-                @SuppressWarnings("unused")
-                boolean ignore = s3Handler.sendFile(key, blob.getFile());
+                // Never setBucket() here: the handler is a singleton shared by every caller
+                s3Handler.sendFile(bucket, key, f);
             }
         }
 

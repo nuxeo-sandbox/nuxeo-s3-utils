@@ -19,6 +19,7 @@
 package org.nuxeo.s3utils.test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -296,6 +297,47 @@ public class TestS3UtilsBlobProvider {
         assertEquals(TEST_FILE_SIZE, f.length());
         assertEquals(TEST_FILE_NAME, f.getName());
 
+    }
+
+    /**
+     * Regression test: getFile() used to <i>move</i> the cached file, renaming it from the ETag to the blob file name.
+     * The LRU cache entry was then gone, so every call downloaded the object again, the renamed file was never evicted,
+     * and two blobs sharing a file name overwrote each other.
+     *
+     * @since 2025.1
+     */
+    @Test
+    @Deploy("nuxeo-s3-utils:test-s3-blobprovider.xml")
+    public void getFileMustKeepTheCacheEntry() throws Exception {
+        TestUtils.assumeAwsIsAvailable();
+
+        S3UtilsBlobProvider blobProvider = (S3UtilsBlobProvider) blobManager.getBlobProvider(
+                "TestS3BlobProvider-XML");
+        assertNotNull(blobProvider);
+
+        ManagedBlob blob = blobProvider.createBlobFromObjectKey(TEST_FILE_KEY);
+        assertNotNull(blob);
+        // The digest is the ETag, which is the key used by the file cache
+        String etag = blob.getDigest();
+        assertTrue(StringUtils.isNotBlank(etag));
+
+        File first = blobProvider.getFile(blob);
+        assertTrue(first.exists());
+        assertEquals(TEST_FILE_SIZE, first.length());
+        assertEquals(TEST_FILE_NAME, first.getName());
+
+        // The cache entry must have survived the call
+        assertNotNull("getFile() removed the entry from the file cache", blobProvider.fileCache.getFile(etag));
+
+        // A second call must return the same content, from the cache
+        File second = blobProvider.getFile(blob);
+        assertTrue(second.exists());
+        assertEquals(TEST_FILE_SIZE, second.length());
+        assertEquals(TEST_FILE_NAME, second.getName());
+        assertNotNull(blobProvider.fileCache.getFile(etag));
+
+        // Each call returns its own copy, so one caller cannot corrupt another one
+        assertNotEquals(first.getAbsolutePath(), second.getAbsolutePath());
     }
 
     @Test

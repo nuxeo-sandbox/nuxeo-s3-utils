@@ -206,8 +206,9 @@ public class CacheForKeyExists {
             if (inCache != -1) {
                 exists = inCache == 1;
             } else {
-                s3Handler.setBucket(bucket);
-                exists = s3Handler.existsKeyInS3(objectKey);
+                // Never setBucket() here: the handler is a singleton shared by every caller, so changing its
+                // bucket would silently repoint every other caller to this bucket
+                exists = s3Handler.existsKeyInS3(bucket, objectKey);
                 addToCachedKeys(bucketAndKey, exists);
             }
         }

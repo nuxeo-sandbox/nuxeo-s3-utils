@@ -59,10 +59,8 @@ public class S3DownloadOp {
             handlerName = org.nuxeo.s3utils.Constants.DEFAULT_HANDLER_NAME;
         }
         S3Handler s3Handler = S3Handler.getS3Handler(handlerName);
-        if (StringUtils.isNotBlank(bucket)) {
-            s3Handler.setBucket(bucket);
-        }
-        result = s3Handler.downloadFile(key, (String) null);
+        // Never setBucket() here: the handler is a singleton shared by every caller
+        result = s3Handler.downloadFile(bucket, key, (String) null);
 
         return result;
     }

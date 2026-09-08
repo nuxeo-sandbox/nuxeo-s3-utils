@@ -75,10 +75,9 @@ public class S3TempSignedUrlOp {
             handlerName = org.nuxeo.s3utils.Constants.DEFAULT_HANDLER_NAME;
         }
 
+        // Never setBucket() here: the handler is a singleton shared by every caller, the bucket is
+        // passed to buildPresignedUrl below
         S3Handler s3Handler = S3Handler.getS3Handler(handlerName);
-        if (StringUtils.isNotBlank(bucket)) {
-            s3Handler.setBucket(bucket);
-        }
 
         if (durationInSeconds == null || durationInSeconds < 1) {
             durationInSeconds = s3Handler.getSignedUrlDuration();

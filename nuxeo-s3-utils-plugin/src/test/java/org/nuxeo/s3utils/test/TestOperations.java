@@ -321,6 +321,39 @@ public class TestOperations {
 
     }
 
+    /**
+     * Regression test: the optional "bucket" parameter used to be applied with S3Handler#setBucket, which permanently
+     * repointed the handler. As the handler is a singleton shared by every caller, the next operation, and every other
+     * thread, silently targeted that bucket.
+     *
+     * @since 2025.1
+     */
+    @Test
+    public void bucketParameterMustNotLeakToTheNextOperation() throws Exception {
+        TestUtils.assumeAwsIsAvailable();
+
+        S3Handler s3Handler = S3Handler.getS3Handler(Constants.DEFAULT_HANDLER_NAME);
+        String configuredBucket = s3Handler.getBucket();
+        assertTrue(StringUtils.isNotBlank(configuredBucket));
+
+        OperationContext ctx = new OperationContext(coreSession);
+        OperationChain chain = new OperationChain("bucketMustNotLeak");
+        chain.add(S3KeyExistsOp.ID)
+             .set("key", TEST_FILE_KEY)
+             .set("bucket", "a-bucket-that-must-not-become-the-default-" + UUID.randomUUID());
+        automationService.run(ctx, chain);
+
+        // The handler must still point to the bucket set in the configuration
+        assertEquals(configuredBucket, s3Handler.getBucket());
+
+        // ...and an operation that does not pass a bucket must still use it
+        ctx = new OperationContext(coreSession);
+        chain = new OperationChain("bucketMustNotLeak-2");
+        chain.add(S3KeyExistsOp.ID).set("key", TEST_FILE_KEY);
+        automationService.run(ctx, chain);
+        assertTrue((Boolean) ctx.get(S3KeyExistsOp.RESULT_CONTEXT_VAR_NAME));
+    }
+
     @Test
     public void testGetObjectMetadataShouldNotFindKey() throws Exception {
         TestUtils.assumeAwsIsAvailable();

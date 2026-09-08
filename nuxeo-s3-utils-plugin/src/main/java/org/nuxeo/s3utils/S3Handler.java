@@ -95,6 +95,21 @@ public interface S3Handler extends S3ObjectStreaming {
     public boolean sendFile(String inKey, File inFile) throws NuxeoException;
 
     /**
+     * Uploads inFile to S3, in <code>inBucket</code>. If it is empty, uses the "current bucket".
+     * <p>
+     * Prefer this method to {@link #setBucket(String)} followed by {@link #sendFile(String, File)}: an S3Handler is a
+     * singleton shared by every caller, so changing its bucket affects everybody else.
+     *
+     * @param inBucket the bucket to upload to, the "current bucket" if empty
+     * @param inKey the key to give to the object
+     * @param inFile the file to upload
+     * @return true if the file could be uploaded with no error
+     * @throws NuxeoException if the upload fails
+     * @since 2025.1
+     */
+    public boolean sendFile(String inBucket, String inKey, File inFile) throws NuxeoException;
+
+    /**
      * Downloads the file from S3 using the "current bucket", saving it to inDestFile
      * <p>
      * <code>fileName</code> should be optional (not required by the interface)
@@ -108,6 +123,22 @@ public interface S3Handler extends S3ObjectStreaming {
     public Blob downloadFile(String inKey, File inDestFile);
 
     /**
+     * Downloads the file from S3, from <code>inBucket</code>, saving it to inDestFile. If <code>inBucket</code> is
+     * empty, uses the "current bucket".
+     * <p>
+     * Prefer this method to {@link #setBucket(String)} followed by {@link #downloadFile(String, File)}: an S3Handler is
+     * a singleton shared by every caller, so changing its bucket affects everybody else.
+     *
+     * @param inBucket the bucket to download from, the "current bucket" if empty
+     * @param inKey the object key
+     * @param inDestFile the file to save the object to
+     * @return a Blob of the downloaded file
+     * @throws NuxeoException if the download fails
+     * @since 2025.1
+     */
+    public Blob downloadFile(String inBucket, String inKey, File inDestFile);
+
+    /**
      * Downloads the file from S3 using the "current bucket". Should return
      * a temporary blob (becomes permanent if stored in a document)
      *
@@ -118,6 +149,22 @@ public interface S3Handler extends S3ObjectStreaming {
      * @since 8.2
      */
     public Blob downloadFile(String inKey, String inFileName);
+
+    /**
+     * Downloads the file from S3, from <code>inBucket</code>. If <code>inBucket</code> is empty, uses the "current
+     * bucket". Returns a temporary blob (becomes permanent if stored in a document).
+     * <p>
+     * Prefer this method to {@link #setBucket(String)} followed by {@link #downloadFile(String, String)}: an S3Handler
+     * is a singleton shared by every caller, so changing its bucket affects everybody else.
+     *
+     * @param inBucket the bucket to download from, the "current bucket" if empty
+     * @param inKey the object key
+     * @param inFileName the file name to give to the blob, the key base name if empty
+     * @return a Blob of the downloaded file
+     * @throws NuxeoException if the download fails
+     * @since 2025.1
+     */
+    public Blob downloadFile(String inBucket, String inKey, String inFileName);
 
     /**
      * Get a SequenceInputStream to the object. The goal of using a SequenceInputStream is to avoid time out while
@@ -158,6 +205,20 @@ public interface S3Handler extends S3ObjectStreaming {
      * @since 8.2
      */
     public boolean deleteFile(String inKey) throws NuxeoException;
+
+    /**
+     * Deletes the file from S3, in <code>inBucket</code>. If <code>inBucket</code> is empty, uses the "current bucket".
+     * <p>
+     * Prefer this method to {@link #setBucket(String)} followed by {@link #deleteFile(String)}: an S3Handler is a
+     * singleton shared by every caller, so changing its bucket affects everybody else.
+     *
+     * @param inBucket the bucket to delete from, the "current bucket" if empty
+     * @param inKey the object key
+     * @return true if the deletion was sent with no error
+     * @throws NuxeoException if the deletion fails
+     * @since 2025.1
+     */
+    public boolean deleteFile(String inBucket, String inKey) throws NuxeoException;
 
     /**
      * Builds a temporary signed URL for the object and returns it.

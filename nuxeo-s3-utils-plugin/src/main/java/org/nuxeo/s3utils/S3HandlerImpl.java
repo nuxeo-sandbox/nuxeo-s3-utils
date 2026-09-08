@@ -175,10 +175,17 @@ public class S3HandlerImpl implements S3Handler {
     @Override
     public boolean sendFile(String inKey, File inFile) throws NuxeoException {
 
+        return sendFile(null, inKey, inFile);
+    }
+
+    @Override
+    public boolean sendFile(String inBucket, String inKey, File inFile) throws NuxeoException {
+
+        String bucket = bucketOrCurrent(inBucket);
         try {
             UploadFileRequest uploadFileRequest = UploadFileRequest.builder()
                                                                    .putObjectRequest(
-                                                                           b -> b.bucket(currentBucket).key(inKey))
+                                                                           b -> b.bucket(bucket).key(inKey))
                                                                    .source(inFile)
                                                                    .build();
             FileUpload upload = transferManager.uploadFile(uploadFileRequest);
@@ -196,10 +203,17 @@ public class S3HandlerImpl implements S3Handler {
     @Override
     public Blob downloadFile(String inKey, File inDestFile) {
 
+        return downloadFile(null, inKey, inDestFile);
+    }
+
+    @Override
+    public Blob downloadFile(String inBucket, String inKey, File inDestFile) {
+
+        String bucket = bucketOrCurrent(inBucket);
         HeadObjectResponse metadata;
 
         try {
-            GetObjectRequest gor = GetObjectRequest.builder().bucket(currentBucket).key(inKey).build();
+            GetObjectRequest gor = GetObjectRequest.builder().bucket(bucket).key(inKey).build();
             DownloadFileRequest downloadFileRequest = DownloadFileRequest.builder()
                                                                          .getObjectRequest(gor)
                                                                          .destination(inDestFile)
@@ -210,7 +224,7 @@ public class S3HandlerImpl implements S3Handler {
              * are unrelated types. We therefore re-read the metadata rather than mapping field by field.
              */
             download.completionFuture().join();
-            metadata = getObjectMetadata(inKey);
+            metadata = getObjectMetadata(bucket, inKey);
 
         } catch (CompletionException ce) {
             throw new NuxeoException(S3Handler.buildDetailedMessageFromAWSException(unwrap(ce)));
@@ -252,6 +266,12 @@ public class S3HandlerImpl implements S3Handler {
     @Override
     public Blob downloadFile(String inKey, String inFileName) throws NuxeoException {
 
+        return downloadFile(null, inKey, inFileName);
+    }
+
+    @Override
+    public Blob downloadFile(String inBucket, String inKey, String inFileName) throws NuxeoException {
+
         Blob blob;
         try {
             blob = Blobs.createBlobWithExtension(".tmp");
@@ -259,7 +279,7 @@ public class S3HandlerImpl implements S3Handler {
             throw new NuxeoException(e);
         }
 
-        blob = downloadFile(inKey, blob.getFile());
+        blob = downloadFile(inBucket, inKey, blob.getFile());
         if (StringUtils.isBlank(inFileName)) {
             inFileName = FilenameUtils.getName(inKey);
         }
@@ -271,8 +291,15 @@ public class S3HandlerImpl implements S3Handler {
     @Override
     public boolean deleteFile(String inKey) throws NuxeoException {
 
+        return deleteFile(null, inKey);
+    }
+
+    @Override
+    public boolean deleteFile(String inBucket, String inKey) throws NuxeoException {
+
+        String bucket = bucketOrCurrent(inBucket);
         try {
-            s3.deleteObject(b -> b.bucket(currentBucket).key(inKey));
+            s3.deleteObject(b -> b.bucket(bucket).key(inKey));
         } catch (SdkException se) {
             throw new NuxeoException(S3Handler.buildDetailedMessageFromAWSException(se));
         }
@@ -385,12 +412,24 @@ public class S3HandlerImpl implements S3Handler {
     @Override
     public HeadObjectResponse getObjectMetadata(String inKey) {
 
+        return getObjectMetadata(null, inKey);
+    }
+
+    /**
+     * Same as {@link #getObjectMetadata(String)}, reading from <code>inBucket</code>. If it is empty, uses the
+     * "current bucket".
+     *
+     * @since 2025.1
+     */
+    protected HeadObjectResponse getObjectMetadata(String inBucket, String inKey) {
+
+        String bucket = bucketOrCurrent(inBucket);
         try {
-            HeadObjectRequest request = HeadObjectRequest.builder().bucket(currentBucket).key(inKey).build();
+            HeadObjectRequest request = HeadObjectRequest.builder().bucket(bucket).key(inKey).build();
             return s3.headObject(request);
         } catch (S3Exception e) {
             throw new NuxeoException(
-                    "An error occurred while getting key %s in AWS bucket %s".formatted(inKey, currentBucket), e);
+                    "An error occurred while getting key %s in AWS bucket %s".formatted(inKey, bucket), e);
         }
     }
 
@@ -455,6 +494,18 @@ public class S3HandlerImpl implements S3Handler {
     @Override
     public int getSignedUrlDuration() {
         return signedUrlDuration;
+    }
+
+    /**
+     * Returns <code>inBucket</code>, or the "current bucket" when it is empty.
+     * <p>
+     * An S3Handler is a singleton shared by every caller, so a per call bucket must never be stored in
+     * <code>currentBucket</code>: it would silently repoint every other caller to that bucket.
+     *
+     * @since 2025.1
+     */
+    protected String bucketOrCurrent(String inBucket) {
+        return StringUtils.isBlank(inBucket) ? currentBucket : inBucket;
     }
 
     protected static void putIfNotNull(Map<String, Object> map, String key, Object value) {

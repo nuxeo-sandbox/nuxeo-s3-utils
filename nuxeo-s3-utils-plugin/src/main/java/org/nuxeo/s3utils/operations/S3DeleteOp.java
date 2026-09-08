@@ -65,10 +65,8 @@ public class S3DeleteOp {
             handlerName = org.nuxeo.s3utils.Constants.DEFAULT_HANDLER_NAME;
         }
         S3Handler s3Handler = S3Handler.getS3Handler(handlerName);
-        if (StringUtils.isNotBlank(bucket)) {
-            s3Handler.setBucket(bucket);
-        }
-        result = s3Handler.deleteFile(key);
+        // Never setBucket() here: the handler is a singleton shared by every caller
+        result = s3Handler.deleteFile(bucket, key);
 
         ctx.put(RESULT_CONTEXT_VAR_NAME, result ? "true" : "false");
     }

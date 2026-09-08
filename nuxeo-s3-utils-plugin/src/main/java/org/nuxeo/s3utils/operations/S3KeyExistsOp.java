@@ -70,10 +70,9 @@ public class S3KeyExistsOp {
             handlerName = org.nuxeo.s3utils.Constants.DEFAULT_HANDLER_NAME;
         }
 
+        // Never setBucket() here: the handler is a singleton shared by every caller, the bucket is
+        // passed to the exists calls below
         S3Handler s3Handler = S3Handler.getS3Handler(handlerName);
-        if (StringUtils.isNotBlank(bucket)) {
-            s3Handler.setBucket(bucket);
-        }
 
         boolean exists = false;
         if(useCache) {
