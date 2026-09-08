@@ -1,5 +1,9 @@
 # nuxeo-s3-utils
 
+> [!IMPORTANT]
+> # ⚠️ IMPORTANT ⚠️
+> ## Upgrading the plugin to LTS 2025 is **Work in Progress**
+> **The plugin is not released. Do not build, deploy or use it as is as long as this notice is displayed.**
 
 This add-on for [Nuxeo](http://www.nuxeo.com) contains utilities for accessing objects in AWS S3 bucket(s):
 
