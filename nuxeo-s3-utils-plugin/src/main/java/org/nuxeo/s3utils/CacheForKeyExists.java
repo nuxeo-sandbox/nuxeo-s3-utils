@@ -18,15 +18,16 @@
  */
 package org.nuxeo.s3utils;
 
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.apache.commons.lang3.StringUtils;
 
 /**
  * This class caches S3 keys and their existence on S3 for a given S3Handler. This is to avoid checking a key too often
+ * <p>
+ * An S3Handler is a singleton shared by every caller, so this cache is reachable from several threads at once: every
+ * access to the underlying map must be synchronized.
  *
  * @since 7.10
  */
@@ -36,15 +37,42 @@ public class CacheForKeyExists {
 
     protected static final int DURATION_IN_CACHE_MS = 600000; // 10 minutes (in milliseconds)
 
+    /**
+     * A bucket name cannot contain ":" (see the AWS bucket naming rules), so it is a safe separator: without one,
+     * ("a", "bc") and ("ab", "c") would share the same cache entry.
+     *
+     * @since 2025.1
+     */
+    protected static final String CACHE_KEY_SEPARATOR = ":";
+
+    /**
+     * What we know about a key, and when we learned it.
+     *
+     * @since 2025.1
+     */
+    protected record CacheEntry(boolean exists, long since) {
+    }
+
     protected String defaultBucket;
 
     protected int maxInCache = MAX_KEYS;
 
     protected int durationInCache = DURATION_IN_CACHE_MS;
 
-    protected LinkedHashMap<String, Boolean> cachedKeysAndExist = new LinkedHashMap<String, Boolean>();
+    /**
+     * Access ordered map whose eldest entry is dropped once the maximum is reached, which gives us a LRU for free.
+     * <p>
+     * Always access it inside a {@code synchronized (cachedKeys)} block.
+     */
+    protected final Map<String, CacheEntry> cachedKeys = new LinkedHashMap<>(16, 0.75f, true) {
 
-    protected LinkedHashMap<String, Long> cachedKeysAndSince = new LinkedHashMap<String, Long>();
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, CacheEntry> eldest) {
+            return size() > maxInCache;
+        }
+    };
 
     protected S3Handler s3Handler;
 
@@ -62,8 +90,9 @@ public class CacheForKeyExists {
      */
     public void cleanup() {
 
-        cachedKeysAndExist = null;
-        cachedKeysAndSince = null;
+        synchronized (cachedKeys) {
+            cachedKeys.clear();
+        }
 
         s3Handler = null;
     }
@@ -72,7 +101,7 @@ public class CacheForKeyExists {
         if (StringUtils.isBlank(bucket)) {
             bucket = defaultBucket;
         }
-        return bucket + objectKey;
+        return bucket + CACHE_KEY_SEPARATOR + objectKey;
     }
 
     /*
@@ -81,63 +110,38 @@ public class CacheForKeyExists {
      */
     protected int existsKeyCheckInCache(String cacheKey) {
 
-        int result = -1;
-
-        if (StringUtils.isNotBlank(cacheKey)) {
-            Boolean exists = cachedKeysAndExist.get(cacheKey);
-            if (exists != null) {
-                Long since = cachedKeysAndSince.get(cacheKey);
-                long timeNow = System.currentTimeMillis();
-
-                if ((timeNow - since) >= durationInCache) {
-                    cachedKeysAndExist.remove(cacheKey);
-                    cachedKeysAndSince.remove(cacheKey);
-                } else {
-                    result = exists ? 1 : 0;
-                }
-            }
+        if (StringUtils.isBlank(cacheKey)) {
+            return -1;
         }
 
-        return result;
-
+        synchronized (cachedKeys) {
+            CacheEntry entry = cachedKeys.get(cacheKey);
+            if (entry == null) {
+                return -1;
+            }
+            if ((System.currentTimeMillis() - entry.since()) >= durationInCache) {
+                cachedKeys.remove(cacheKey);
+                return -1;
+            }
+            return entry.exists() ? 1 : 0;
+        }
     }
 
     protected void addToCachedKeys(String cacheKey, boolean exists) {
 
-        if (StringUtils.isNotBlank(cacheKey)) {
-            if (cachedKeysAndExist.size() >= maxInCache) {
+        if (StringUtils.isBlank(cacheKey)) {
+            return;
+        }
 
-                Entry<String, Long> current;
-                long timeNow = System.currentTimeMillis();
-                Iterator<Map.Entry<String, Long>> it = cachedKeysAndSince.entrySet().iterator();
-                while (it.hasNext()) {
-                    current = it.next(); // Must be called before removing
-                    Long since = current.getValue();
-                    if ((timeNow - since) >= durationInCache) {
-                        it.remove();
-                        cachedKeysAndExist.remove(current.getKey());
-                    }
-                }
+        synchronized (cachedKeys) {
+            /*
+             * Drop what has expired, then let removeEldestEntry do the capping. The previous code purged 20% of
+             * maxInCache by hand, which rounded down to 0 for a maximum below 5 and let the cache grow without limit.
+             */
+            long timeNow = System.currentTimeMillis();
+            cachedKeys.entrySet().removeIf(e -> (timeNow - e.getValue().since()) >= durationInCache);
 
-                // Still something? Remove a few...
-                if (cachedKeysAndExist.size() >= maxInCache) {
-                    int howMany = (int) (maxInCache * 0.2);
-                    String[] keys = new String[howMany];
-                    Iterator<Map.Entry<String, Boolean>> iterator = cachedKeysAndExist.entrySet().iterator();
-                    for (int i = 0; i < howMany; ++i) {
-                        keys[i] = iterator.next().getKey();
-                    }
-
-                    for (String oneKey : keys) {
-                        cachedKeysAndExist.remove(oneKey);
-                        cachedKeysAndSince.remove(oneKey);
-                    }
-                }
-            }
-
-            cachedKeysAndExist.put(cacheKey, exists);
-            cachedKeysAndSince.put(cacheKey, System.currentTimeMillis());
-
+            cachedKeys.put(cacheKey, new CacheEntry(exists, timeNow));
         }
     }
 
@@ -223,7 +227,9 @@ public class CacheForKeyExists {
      * @since 8.2
      */
     public int getCacheCount() {
-        return cachedKeysAndExist.size();
+        synchronized (cachedKeys) {
+            return cachedKeys.size();
+        }
     }
 
     /**

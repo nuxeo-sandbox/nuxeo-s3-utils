@@ -278,7 +278,8 @@ The plugin contributes the following operations to be used in an Automation Chai
 #### `S3Utils.Delete`
 * Label: `Files > S3 Utils: Delete`
 * Input is `void`, deletes a file from S3, returns void
-* Sets a new context variable with the result: `s3UtilsDeletionResult` will contain `"true"` if the key was deleted on S3, or `"false"` if it could not be deleted.
+* Sets a new context variable with the result: `s3UtilsDeletionResult` contains `"true"` when the deletion was accepted by S3. It is never `"false"`: any error raises an exception, which aborts the chain.
+  * **Notice**: S3 does not fail when the key does not exist, so a successful deletion does not mean the object was there in the first place. Use `S3Utils.KeyExists` first if you need to know.
 * Parameters:
   * `handlerName`: The name of the S3Handler to use (see examples above)
   * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)

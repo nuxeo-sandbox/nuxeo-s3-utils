@@ -140,7 +140,10 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
 
     @Override
     public void close() {
-        fileCache.clear();
+        // initialize() may have failed before the cache was built
+        if (fileCache != null) {
+            fileCache.clear();
+        }
         if (cachedir != null) {
             try {
                 FileUtils.deleteDirectory(cachedir);

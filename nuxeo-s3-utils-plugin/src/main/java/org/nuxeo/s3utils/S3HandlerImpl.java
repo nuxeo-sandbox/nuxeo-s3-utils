@@ -253,6 +253,17 @@ public class S3HandlerImpl implements S3Handler {
     @Override
     public byte[] readBytes(String key, long start, long len) throws IOException {
 
+        /*
+         * Without this, len <= 0 builds the range "bytes=start-(start-1)", which AWS rejects with an error that says
+         * nothing about the real problem, and a negative start silently asks for the last bytes of the object.
+         */
+        if (start < 0) {
+            throw new IllegalArgumentException("start must be >= 0, got " + start);
+        }
+        if (len <= 0) {
+            throw new IllegalArgumentException("len must be > 0, got " + len);
+        }
+
         GetObjectRequest gor = GetObjectRequest.builder()
                                                .bucket(currentBucket)
                                                .key(key)

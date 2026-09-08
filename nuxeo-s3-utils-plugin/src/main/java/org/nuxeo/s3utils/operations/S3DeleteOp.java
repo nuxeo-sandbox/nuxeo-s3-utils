@@ -34,10 +34,15 @@ import org.nuxeo.s3utils.S3Handler;
  * Deletes a file from S3, using S3Handler <code>handlerName</code> (if empty, uses the default handler).
  * <p>
  * If <code>bucket</code> is empty, uses the bucket set in the handler configuration
+ * <p>
+ * <b>About the {@value #RESULT_CONTEXT_VAR_NAME} context variable</b>: it is set to <code>"true"</code> when the
+ * deletion was accepted by S3. It is never set to <code>"false"</code>: any error raises an exception, which aborts
+ * the chain. Note also that S3 does not fail when the key does not exist, so a successful deletion does not mean the
+ * object was there in the first place.
  *
  * @since 8.1
  */
-@Operation(id = S3DeleteOp.ID, category = Constants.CAT_BLOB, label = "S3 Utils: Delete", description = "Deletes a file from S3, using S3Handler <code>handlerName</code> (if empty, uses the default handler). Sets a new context variable, s3UtilsDeletionResult to true/false. If <code>bucket</code> is empty, uses the bucket set in the handler configuration")
+@Operation(id = S3DeleteOp.ID, category = Constants.CAT_BLOB, label = "S3 Utils: Delete", description = "Deletes a file from S3, using S3Handler <code>handlerName</code> (if empty, uses the default handler). Sets the s3UtilsDeletionResult context variable to \"true\" when the deletion was accepted by S3, any error raises an exception. S3 does not fail on a key that does not exist. If <code>bucket</code> is empty, uses the bucket set in the handler configuration")
 public class S3DeleteOp {
 
     public static final String ID = "S3Utils.Delete";

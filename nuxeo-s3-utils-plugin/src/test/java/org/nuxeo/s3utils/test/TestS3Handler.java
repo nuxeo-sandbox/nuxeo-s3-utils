@@ -22,6 +22,7 @@ package org.nuxeo.s3utils.test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -173,6 +174,21 @@ public class TestS3Handler {
         S3Handler overridden = S3Handler.getS3Handler("test-override-handler");
         assertNotNull(overridden);
         assertEquals("bucket-set-by-the-overriding-contribution", overridden.getBucket());
+    }
+
+    /**
+     * Regression test: a length <= 0 used to build the range "bytes=start-(start-1)", which AWS rejects with an error
+     * that says nothing about the real problem, and a negative start silently asked for the last bytes of the object.
+     *
+     * @since 2025.1
+     */
+    @Test
+    public void readBytesMustRejectAnInvalidRange() throws Exception {
+        TestUtils.assumeAwsIsAvailable();
+
+        assertThrows(IllegalArgumentException.class, () -> s3Handler.readBytes(TEST_FILE_KEY, 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> s3Handler.readBytes(TEST_FILE_KEY, 0, -10));
+        assertThrows(IllegalArgumentException.class, () -> s3Handler.readBytes(TEST_FILE_KEY, -1, 10));
     }
 
     @Test

@@ -197,11 +197,14 @@ public interface S3Handler extends S3ObjectStreaming {
     public byte[] readBytes(String key, long start, long len) throws IOException;
 
     /**
-     * Deletes the file from S3 using the "current bucket", returns true if succesful
+     * Deletes the file from S3 using the "current bucket".
+     * <p>
+     * Returns true when the deletion was accepted by S3, and throws otherwise: there is no case where it returns
+     * false. Note that S3 does not fail when the key does not exist.
      *
-     * @param inKey
-     * @return
-     * @throws NuxeoException
+     * @param inKey the object key
+     * @return true when the deletion was accepted by S3
+     * @throws NuxeoException if the deletion fails
      * @since 8.2
      */
     public boolean deleteFile(String inKey) throws NuxeoException;
