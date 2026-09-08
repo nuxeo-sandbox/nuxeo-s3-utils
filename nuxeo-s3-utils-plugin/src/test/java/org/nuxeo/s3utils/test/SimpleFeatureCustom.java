@@ -21,11 +21,11 @@ package org.nuxeo.s3utils.test;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.MissingResourceException;
 import java.util.Properties;
 
 import org.apache.commons.lang3.StringUtils;
-import org.junit.Assume;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.nuxeo.common.utils.FileUtils;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -61,6 +61,8 @@ import org.nuxeo.s3utils.S3Handler;
  */
 @Deploy("org.nuxeo.runtime.aws")
 public class SimpleFeatureCustom implements RunnerFeature {
+
+    private static final Logger log = LogManager.getLogger(SimpleFeatureCustom.class);
 
     public static final String TEST_CONF_FILE = "aws-test.conf";
 
@@ -116,33 +118,19 @@ public class SimpleFeatureCustom implements RunnerFeature {
     @Override
     public void initialize(FeaturesRunner runner) throws Exception {
 
-        File file = null;
-        FileInputStream fileInput = null;
-        try {
-            file = FileUtils.getResourceFileFromContext(TEST_CONF_FILE);
-            if (file == null || !file.exists()) {
-                // Not an error: the environment variables are then used instead
-                System.out.println("No '" + TEST_CONF_FILE
-                        + "' file in the test resources, looking for environment variables instead.");
-                props = null;
-            } else {
-                fileInput = new FileInputStream(file);
+        File file = FileUtils.getResourceFileFromContext(TEST_CONF_FILE);
+        if (file == null || !file.exists()) {
+            // Not an error: the environment variables are then used instead
+            log.info("No '{}' file in the test resources, looking for environment variables instead.", TEST_CONF_FILE);
+            props = null;
+        } else {
+            try (FileInputStream fileInput = new FileInputStream(file)) {
                 props = new Properties();
                 props.load(fileInput);
-            }
-
-        } catch (Exception e) {
-            // Do not fail silently: without this, every S3 test skips with no explanation
-            System.err.println("Could not load the '" + TEST_CONF_FILE + "' test configuration file: " + e);
-            props = null;
-        } finally {
-            if (fileInput != null) {
-                try {
-                    fileInput.close();
-                } catch (IOException e) {
-                    // Ignore
-                }
-                fileInput = null;
+            } catch (IOException e) {
+                // Do not fail silently: without this, every S3 test skips with no explanation
+                log.error("Could not load the '{}' test configuration file", TEST_CONF_FILE, e);
+                props = null;
             }
         }
 
@@ -182,8 +170,9 @@ public class SimpleFeatureCustom implements RunnerFeature {
             String region = props.getProperty(TEST_CONF_KEY_NAME_AWS_REGION);
             String bucket = props.getProperty(TEST_CONF_KEY_NAME_AWS_S3_BUCKET);
             if (StringUtils.isAnyBlank(region, bucket)) {
-                System.err.println("The test configuration is incomplete, '" + TEST_CONF_KEY_NAME_AWS_REGION + "' and '"
-                        + TEST_CONF_KEY_NAME_AWS_S3_BUCKET + "' are both required: the S3 tests will be skipped.");
+                log.error("The test configuration is incomplete, '{}' and '{}' are both required:"
+                        + " the S3 tests will be skipped.", TEST_CONF_KEY_NAME_AWS_REGION,
+                        TEST_CONF_KEY_NAME_AWS_S3_BUCKET);
                 props = null;
                 return;
             }

@@ -41,10 +41,10 @@ import org.nuxeo.common.file.FileCache;
 import org.nuxeo.common.file.LRUFileCache;
 import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.ecm.core.api.Blob;
-import org.nuxeo.ecm.core.api.blobholder.BlobHolder;
-import org.nuxeo.ecm.core.api.blobholder.SimpleBlobHolder;
 import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.NuxeoException;
+import org.nuxeo.ecm.core.api.blobholder.BlobHolder;
+import org.nuxeo.ecm.core.api.blobholder.SimpleBlobHolder;
 import org.nuxeo.ecm.core.blob.AbstractBlobProvider;
 import org.nuxeo.ecm.core.blob.BlobInfo;
 import org.nuxeo.ecm.core.blob.ManagedBlob;
@@ -90,15 +90,14 @@ import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
  * - You can still download the file by using the forceDownload() method
  * - So, for example, to avoid Nuxeo downloading files above 1GB:<br>
  * <property name="noDefaultDownloadAbove">1073741824</property>
- * 
+ *
  * @since 2.1.1
  */
 public class S3UtilsBlobProvider extends AbstractBlobProvider {
 
     protected static final Logger log = LogManager.getLogger(S3UtilsBlobProvider.class);
 
-    public static final String NO_DEFAULT_DOWNLOAD_ABOVE_PROPERTY = "noDefaultDownloadAbove"; // "1073741824"; //1024 * 1024 *
-                                                                                     // 1024
+    public static final String NO_DEFAULT_DOWNLOAD_ABOVE_PROPERTY = "noDefaultDownloadAbove";
 
     public static final String CACHE_SIZE_PROPERTY = "cacheSize";
 
@@ -194,10 +193,10 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
             Path source = Paths.get(f.getAbsolutePath());
             Path result = Files.move(source, source.resolveSibling(blob.getFilename()),
                     StandardCopyOption.REPLACE_EXISTING);
-            f = new File(result.toString());
+            f = result.toFile();
 
         } catch (IOException e) {
-            throw new NuxeoException("Erreur getting a file for blob key " + blob.getKey(), e);
+            throw new NuxeoException("Error getting a file for blob key " + blob.getKey(), e);
         }
         return f;
     }
@@ -247,7 +246,7 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
     }
 
     /*
-     * 
+     *
      */
     protected File getFileFromCache(ManagedBlob blob) throws IOException {
 
@@ -276,18 +275,15 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
     }
 
     /**
-     * Creates a blob from the remote s3 object (object is not downloaded)
+     * Creates a blob from the remote s3 object, the object is not downloaded.
      * <p>
-     * <b>IMPORTANT</b>:
-     * <ul>
-     * <li>The <code>blobInfo.key</code> field will be replaced by the
-     * provider's own key scheme</li>
-     * <li>The <code>blobInfo.key</code> is the Object key on s3, the code gets info from s3 (size, etc.)
-     * 
-     * @param blobInfo
-     * @return
-     * @throws IOException
-     * @since TODO
+     * <b>IMPORTANT</b>: the key of the returned blob is not {@code objectKey}, it is built with the provider's own key
+     * scheme (see {@link BlobKey}). The object info (size, mime type, etc.) is read from S3.
+     *
+     * @param objectKey the object key on S3
+     * @return a blob referencing the remote object
+     * @throws IOException if the object info cannot be read
+     * @since 2.1.1
      */
     public ManagedBlob createBlobFromObjectKey(String objectKey) throws IOException {
 
@@ -319,7 +315,8 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
 
     }
 
-    protected File buildFileWithObjectInfo(String objectKey, HeadObjectResponse metadata, File toFile) throws IOException {
+    protected File buildFileWithObjectInfo(String objectKey, HeadObjectResponse metadata, File toFile)
+            throws IOException {
 
         String text = "This file is beyond the max. size for download\n\n";
         text += FilenameUtils.getName(objectKey) + "\n";
@@ -358,30 +355,29 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
             converted = holder.getBlob();
         } else {
             switch (mimeType) {
-            case "application/pdf":
-                converted = convertHelper.convertBlob(placeHolderBlob, "application/pdf");
-                break;
-
-            case "text/plain":
-                converted = placeHolderBlob;
-                break;
-
-            default:
+            case "application/pdf" -> converted = convertHelper.convertBlob(placeHolderBlob, "application/pdf");
+            case "text/plain" -> converted = placeHolderBlob;
+            default -> {
+                /*
+                 * A converter may not exist for this mime type, or may fail on our tiny place holder. This is not
+                 * fatal: we degrade to a PDF, then to the plain text blob. We catch RuntimeException rather than
+                 * Exception so that no checked exception, InterruptedException in particular, is ever swallowed here.
+                 */
                 try {
                     converted = convertHelper.convertBlob(placeHolderBlob, mimeType);
-                } catch (Exception e) {
-                    log.warn("Failed to convert the place holder text/plain blob to " + mimeType
-                            + ", trying to convert it to PDF first, then convert this pdf", e);
+                } catch (RuntimeException e) {
+                    log.warn("Failed to convert the place holder text/plain blob to {}, "
+                            + "trying to convert it to PDF first, then convert this pdf", mimeType, e);
                     try {
                         placeHolderBlobPdf = convertHelper.convertBlob(placeHolderBlob, "application/pdf");
-                        converted = convertHelper.convertBlob(placeHolderBlob, mimeType);
-                    } catch (Exception e2) {
-                        log.warn(String.format(
-                                "Could not generate a blob for object %s, content type %s, normalized to %s: Returning a simple string blob",
-                                objectKey, metadata.contentType(), mimeType), e2);
+                        converted = convertHelper.convertBlob(placeHolderBlobPdf, mimeType);
+                    } catch (RuntimeException e2) {
+                        log.warn("Could not generate a blob for object {}, content type {}, normalized to {}: "
+                                + "returning a simple string blob", objectKey, metadata.contentType(), mimeType, e2);
                         converted = placeHolderBlob;
                     }
                 }
+            }
             }
         }
 
@@ -392,7 +388,7 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
         return converted.getFile();
 
     }
-    
+
     public long getMaxForDefaultDownload() {
         return maxForDefaultDownload;
     }

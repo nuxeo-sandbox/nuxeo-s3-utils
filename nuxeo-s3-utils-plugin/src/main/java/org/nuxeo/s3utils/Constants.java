@@ -19,11 +19,11 @@
 package org.nuxeo.s3utils;
 
 /**
- * 
+ *
  * @since 8.1
  */
 public class Constants {
-    
+
     public static final String DEFAULT_HANDLER_NAME = "default";
 
     public static final String CONF_KEY_NAME_REGION = "nuxeo.aws.s3utils.region";
@@ -33,7 +33,7 @@ public class Constants {
     public static final String CONF_KEY_NAME_DURATION = "nuxeo.aws.s3utils.duration";
 
     public static final String CONF_KEY_NAME_USECACHEFOREXISTSKEY = "nuxeo.aws.s3utils.use_cache_for_exists_key";
-    
+
     public static final int DEFAULT_SIGNED_URL_DURATION = 1200;// 20 minutes
 
 }

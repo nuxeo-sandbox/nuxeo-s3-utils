@@ -18,9 +18,23 @@
  */
 package org.nuxeo.s3utils.test;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
+import java.io.SequenceInputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+
+import jakarta.inject.Inject;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -45,19 +59,8 @@ import org.nuxeo.s3utils.Constants;
 import org.nuxeo.s3utils.S3Handler;
 import org.nuxeo.s3utils.S3UtilsBlobProvider;
 
-import jakarta.inject.Inject;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.io.File;
-import java.io.SequenceInputStream;
-import java.util.HashMap;
-import java.util.Map;
-
 /**
- * @since TODO
+ * @since 2.1.1
  */
 @RunWith(FeaturesRunner.class)
 @Features({ PlatformFeature.class, SimpleFeatureCustom.class })
@@ -65,6 +68,8 @@ import java.util.Map;
 @Deploy("org.nuxeo.ecm.platform.convert")
 @Deploy("nuxeo-s3-utils")
 public class TestS3UtilsBlobProvider {
+
+    private static final Logger log = LogManager.getLogger(TestS3UtilsBlobProvider.class);
 
     @Inject
     CoreSession session;
@@ -101,7 +106,7 @@ public class TestS3UtilsBlobProvider {
             TEST_FILE_KEY = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY);
             assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY,
                     StringUtils.isNotBlank(TEST_FILE_KEY));
-            
+
             TEST_FILE_NAME = FilenameUtils.getName(TEST_FILE_KEY);
 
             String sizeStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE);
@@ -178,8 +183,8 @@ public class TestS3UtilsBlobProvider {
         // Had issue deploying the pdf2image converter in unit test (working fine in live testing)
         // Issue fixed, but I still let this test here for a while.
         if (!conversionService.getRegistredConverters().contains("pdf2image")) {
-            System.out.println(
-                    "******************************\nConverter pdf2image not deployed in the unit test => skipping the testGetBlobImageWithDownloadThreshold test\n******************************");
+            log.warn("Converter pdf2image not deployed in the unit test"
+                    + " => skipping the testGetBlobImageWithDownloadThreshold test");
             Assume.assumeTrue("Converter pdf2image not deployed", false);
         }
 
@@ -353,7 +358,8 @@ public class TestS3UtilsBlobProvider {
         assertTrue(docBlob instanceof ManagedBlob);
 
         // As of today, We can't call the getStream() method of Blob, this behavior is standard and will return a stream
-        // from a File (so, the S3 object is downloaded/cached). We must call the blobProvider custom getInputStream method
+        // from a File (so, the S3 object is downloaded/cached). We must call the blobProvider custom
+        // getSequenceInputStream method
         SequenceInputStream stream = blobProvider.getSequenceInputStream(b);
         assertNotNull(stream);
 
@@ -374,7 +380,7 @@ public class TestS3UtilsBlobProvider {
         assertEquals(boi.size, size);
 
     }
-    
+
     @Test
     @Deploy("nuxeo-s3-utils:test-s3-blobprovider.xml")
     public void shouldReadBytesFromBigObject() throws Exception {
@@ -396,14 +402,14 @@ public class TestS3UtilsBlobProvider {
         Blob docBlob = (Blob) doc.getPropertyValue("file:content");
         assertNotNull(docBlob);
         assertTrue(docBlob instanceof ManagedBlob);
-        
+
         byte[] bytes = blobProvider.readBytes(b, boi.readBytesStart, boi.readBytesLen);
         // Our test file is a pure text, change this unit test if it's different for you
         assertEquals(boi.readBytesLen, bytes.length);
-        
-        String resultStr = new String(bytes);
+
+        String resultStr = new String(bytes, StandardCharsets.UTF_8);
         assertEquals(boi.readBytesValue, resultStr);
-        
+
     }
 
 }

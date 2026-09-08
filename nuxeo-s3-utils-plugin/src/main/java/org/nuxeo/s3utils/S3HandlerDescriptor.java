@@ -20,7 +20,6 @@ package org.nuxeo.s3utils;
 
 import org.apache.commons.lang3.StringUtils;
 import org.nuxeo.common.xmap.annotation.XNode;
-//import org.nuxeo.common.xmap.annotation.XNodeMap;
 import org.nuxeo.common.xmap.annotation.XObject;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.aws.AWSConfigurationService;
@@ -41,13 +40,13 @@ import software.amazon.awssdk.regions.Region;
  *     <bucket>${nuxeo.aws.s3utils.bucket:=}</bucket>
  *     <tempSignedUrlDuration>${nuxeo.aws.s3utils.duration:=}</tempSignedUrlDuration>
  *     <useCacheForExistsKey>${nuxeo.aws.s3utils.use_cache_for_exists_key:=}</useCacheForExistsKey>
- *     
+ *
  *     <!-- No values (or 0) => Use the AWS SDK defaults -->
  *     <!-- 5MB (5242880) -->
  *     <minimumUploadPartSize>${nuxeo.aws.s3utils.minimumUploadPartSize:=}</minimumUploadPartSize>
  *     <!-- 16MB (16777216) -->
  *     <multipartUploadThreshold>${nuxeo.aws.s3utils.multipartUploadThreshold:=}</multipartUploadThreshold>
- *     
+ *
  *   </s3Handler>
  *  </extension>
  * </pre></code>
@@ -88,10 +87,10 @@ public class S3HandlerDescriptor {
 
     @XNode("useCacheForExistsKey")
     protected String useCacheForExistsKey = "false";
-    
+
     @XNode("minimumUploadPartSize")
     protected Long minimumUploadPartSize = 0L;
-    
+
     @XNode("multipartUploadThreshold")
     protected Long multipartUploadThreshold = 0L;
 
@@ -154,7 +153,7 @@ public class S3HandlerDescriptor {
         }
         return signedUrlDuration;
     }
-    
+
     public long getMinimumUploadPartSize() {
         if (minimumUploadPartSize == null || minimumUploadPartSize <= 0) {
             minimumUploadPartSize = MINIMUM_UPLOAD_PART_SIZE_DEFAULT;

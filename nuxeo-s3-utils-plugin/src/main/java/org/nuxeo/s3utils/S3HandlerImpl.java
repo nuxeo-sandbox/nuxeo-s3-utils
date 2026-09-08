@@ -143,6 +143,9 @@ public class S3HandlerImpl implements S3Handler {
 
         transferManager = S3TransferManager.builder().s3Client(s3Async).build();
 
+        log.debug("S3Handler '{}' initialized on region '{}', bucket '{}', minimumUploadPartSize={}, "
+                + "multipartUploadThreshold={}", name, region, currentBucket, partSize, threshold);
+
         if (useCacheForExistsKey) {
             keyExistsCache = new CacheForKeyExists(this);
         }
@@ -294,8 +297,8 @@ public class S3HandlerImpl implements S3Handler {
             throw new IllegalArgumentException("duration of " + durationInSeconds + " is invalid.");
         }
 
-        final String bucket = inBucket;
-        final Duration expiration = Duration.ofSeconds(durationInSeconds);
+        String bucket = inBucket;
+        Duration expiration = Duration.ofSeconds(durationInSeconds);
 
         S3Presigner.Builder presignerBuilder = S3Presigner.builder()
                                                           .region(Region.of(region))
@@ -338,7 +341,7 @@ public class S3HandlerImpl implements S3Handler {
             inBucket = currentBucket;
         }
 
-        final String bucket = inBucket;
+        String bucket = inBucket;
         try {
             s3.headObject(b -> b.bucket(bucket).key(inKey));
             exists = true;
@@ -387,7 +390,7 @@ public class S3HandlerImpl implements S3Handler {
             return s3.headObject(request);
         } catch (S3Exception e) {
             throw new NuxeoException(
-                    String.format("An error occured while getting key %s in AWS bucket %s", inKey, currentBucket), e);
+                    "An error occurred while getting key %s in AWS bucket %s".formatted(inKey, currentBucket), e);
         }
     }
 
@@ -410,7 +413,8 @@ public class S3HandlerImpl implements S3Handler {
         putIfNotNull(mutableMap, "Content-Disposition", metadata.contentDisposition());
         putIfNotNull(mutableMap, "Content-Language", metadata.contentLanguage());
         putIfNotNull(mutableMap, "Cache-Control", metadata.cacheControl());
-        putIfNotNull(mutableMap, "Last-Modified", metadata.lastModified() == null ? null : metadata.lastModified().toString());
+        putIfNotNull(mutableMap, "Last-Modified",
+                metadata.lastModified() == null ? null : metadata.lastModified().toString());
         putIfNotNull(mutableMap, "Expires", metadata.expiresString());
         putIfNotNull(mutableMap, "x-amz-version-id", metadata.versionId());
         putIfNotNull(mutableMap, "x-amz-storage-class",
@@ -420,7 +424,8 @@ public class S3HandlerImpl implements S3Handler {
 
         mutableMap.put("bucketName", currentBucket);
         mutableMap.put("objectKey", inKey);
-        mutableMap.put("userMetadata", metadata.metadata() == null ? new HashMap<String, String>() : metadata.metadata());
+        mutableMap.put("userMetadata",
+                metadata.metadata() == null ? new HashMap<String, String>() : metadata.metadata());
 
         // Convert Map to JSON
         ObjectMapper objectMapper = new ObjectMapper();

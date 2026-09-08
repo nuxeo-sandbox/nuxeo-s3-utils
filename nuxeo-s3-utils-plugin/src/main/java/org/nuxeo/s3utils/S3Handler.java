@@ -130,7 +130,7 @@ public interface S3Handler extends S3ObjectStreaming {
      * The caller can call close() any time, this will close all the streams.
      * <br>
      * See S3ObjectSequentialStream for more info.
-     * 
+     *
      * @param key
      * @param pieceSize
      * @return the SequenceInputStream
@@ -251,12 +251,11 @@ public interface S3Handler extends S3ObjectStreaming {
     public boolean existsKey(String bucket, String inKey);
 
     /**
-     * Gets the object metadata without fetching the object itself,
-     * as returned by AWS SDK
-     * 
-     * @param inKey
-     * @return
-     * @since TODO
+     * Gets the object metadata without fetching the object itself, as returned by the AWS SDK.
+     *
+     * @param inKey the object key
+     * @return the metadata of the object
+     * @since 2.0
      */
     public HeadObjectResponse getObjectMetadata(String inKey);
 

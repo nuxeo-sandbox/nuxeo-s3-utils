@@ -18,10 +18,16 @@
  */
 package org.nuxeo.s3utils.test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.util.UUID;
+
+import jakarta.inject.Inject;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -39,6 +45,7 @@ import org.nuxeo.ecm.automation.OperationException;
 import org.nuxeo.ecm.automation.test.AutomationFeature;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.CoreSession;
+import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.api.impl.blob.FileBlob;
 import org.nuxeo.ecm.core.blob.ManagedBlob;
 import org.nuxeo.runtime.test.runner.Deploy;
@@ -53,8 +60,6 @@ import org.nuxeo.s3utils.operations.S3GetObjectMetadataOp;
 import org.nuxeo.s3utils.operations.S3KeyExistsOp;
 import org.nuxeo.s3utils.operations.S3TempSignedUrlOp;
 import org.nuxeo.s3utils.operations.S3UploadOp;
-
-import jakarta.inject.Inject;
 
 /**
  * See {@link SimpleFeatureCustom} for explanation about the local configuration
@@ -95,7 +100,7 @@ public class TestOperations {
             TEST_FILE_KEY = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY);
             assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY,
                     StringUtils.isNotBlank(TEST_FILE_KEY));
-            
+
             TEST_FILE_NAME = FilenameUtils.getName(TEST_FILE_KEY);
 
             String sizeStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE);
@@ -128,8 +133,8 @@ public class TestOperations {
         if (StringUtils.isNotBlank(UPLOAD_KEY) && TestUtils.awsCredentialsLookOk()) {
             try {
                 s3Handler.deleteFile(UPLOAD_KEY);
-            } catch (Exception e) {
-                // Ignore
+            } catch (NuxeoException e) {
+                // Ignore: the key most likely does not exist, which is what we want
             }
         }
     }
@@ -334,7 +339,7 @@ public class TestOperations {
     @Test
     @Deploy("nuxeo-s3-utils:test-s3-blobprovider.xml")
     public void shouldCreateBlobFromKey() throws Exception {
-        
+
         TestUtils.assumeAwsIsAvailable();
         OperationChain chain;
         OperationContext ctx = new OperationContext(coreSession);

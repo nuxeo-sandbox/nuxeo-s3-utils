@@ -18,8 +18,6 @@
  */
 package org.nuxeo.s3utils.test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -28,25 +26,32 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Assume;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.blob.ManagedBlob;
+import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.test.runner.TransactionalFeature;
 import org.nuxeo.s3utils.Constants;
 import org.nuxeo.s3utils.S3Handler;
-import org.nuxeo.s3utils.S3UtilsBlobProvider;
 
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.exception.SdkException;
 
 public class TestUtils {
+
+    private static final Logger log = LogManager.getLogger(TestUtils.class);
 
     public static int credentialsLookOk = -1;
 
@@ -100,9 +105,9 @@ public class TestUtils {
     /**
      * We return fails only if we get an error related to credentials while trying to connect to an s3 bucket.
      * In all other cases we return true.
-     * 
+     *
      * @return
-     * @since TODO
+     * @since 2.1.1
      */
     public static boolean awsCredentialsLookOk() {
 
@@ -131,8 +136,8 @@ public class TestUtils {
                     // A service error (404 no such bucket, 403, ...) means the credentials were usable
                 }
             } else {
-                System.out.println("The local '" + SimpleFeatureCustom.TEST_CONF_FILE
-                        + "' configuration file is missing: Cannot check AWS connection ");
+                log.info("The local '{}' configuration file is missing: cannot check the AWS connection.",
+                        SimpleFeatureCustom.TEST_CONF_FILE);
             }
         }
 
@@ -147,13 +152,9 @@ public class TestUtils {
 
         File resultFile = null;
 
-        HttpURLConnection http = null;
-        int BUFFER_SIZE = 4096;
-
-        URL theURL = new URL(url);
-
-        http = (HttpURLConnection) theURL.openConnection();
-        // HTTPUtils.addHeaders(http, headers, headersAsJSON);
+        // new URL(String) is deprecated since Java 20
+        URL theURL = URI.create(url).toURL();
+        HttpURLConnection http = (HttpURLConnection) theURL.openConnection();
 
         if (http.getResponseCode() == HttpURLConnection.HTTP_OK) {
             String fileName = "";
@@ -163,29 +164,29 @@ public class TestUtils {
                 fileName = fileNameFromContentDisposition(disposition);
             } else {
                 // extracts file name from URL
-                fileName = url.substring(url.lastIndexOf("/") + 1, url.length());
+                fileName = url.substring(url.lastIndexOf("/") + 1);
                 int idx = fileName.indexOf("?");
                 if (idx > -1) {
                     fileName = fileName.substring(0, idx);
                 }
             }
+            /*
+             * The name comes from a remote header or from the URL: keep the base name only, so that it can never
+             * escape the temporary directory. Nuxeo temporary files must be created below the Nuxeo temporary
+             * directory, hence Framework.createTempDirectory and not java.io.tmpdir.
+             */
+            fileName = FilenameUtils.getName(fileName);
             if (StringUtils.isEmpty(fileName)) {
-                fileName = "DownloadedFile-" + java.util.UUID.randomUUID().toString();
+                fileName = "DownloadedFile-" + UUID.randomUUID();
             }
 
-            String tempDir = System.getProperty("java.io.tmpdir");
+            File tempDir = Framework.createTempDirectory("s3utils-download-").toFile();
             resultFile = new File(tempDir, fileName);
 
-            FileOutputStream outputStream = new FileOutputStream(resultFile);
-            InputStream inputStream = http.getInputStream();
-            int bytesRead = -1;
-            byte[] buffer = new byte[BUFFER_SIZE];
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                outputStream.write(buffer, 0, bytesRead);
+            try (InputStream inputStream = http.getInputStream();
+                    FileOutputStream outputStream = new FileOutputStream(resultFile)) {
+                IOUtils.copy(inputStream, outputStream);
             }
-
-            outputStream.close();
-            inputStream.close();
         }
 
         return resultFile;
@@ -249,13 +250,13 @@ public class TestUtils {
      * - attach the blob to file:content,
      * - Wait for async work (TransactionalFeature)
      * - Refresh and return the doc
-     * 
+     *
      * @param session
      * @param transactionalFeature
      * @param ManagedBlob
      * @return
      * @throws Exception
-     * @since TODO
+     * @since 2.1.1
      */
     public static DocumentModel createDocWithBlob(CoreSession session, TransactionalFeature transactionalFeature,
             ManagedBlob blob) throws Exception {

@@ -19,10 +19,14 @@
 
 package org.nuxeo.s3utils.test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.SequenceInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import org.apache.commons.io.FilenameUtils;
@@ -33,6 +37,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.common.utils.FileUtils;
 import org.nuxeo.ecm.core.api.Blob;
+import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.platform.test.PlatformFeature;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
@@ -71,7 +76,7 @@ public class TestS3Handler {
             TEST_FILE_KEY = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY);
             assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY,
                     StringUtils.isNotBlank(TEST_FILE_KEY));
-            
+
             TEST_FILE_NAME = FilenameUtils.getName(TEST_FILE_KEY);
 
             String sizeStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE);
@@ -112,8 +117,8 @@ public class TestS3Handler {
         // Delete in case it already exist from an interrupted previous test
         try {
             s3Handler.deleteFile(uploadKey);
-        } catch (Exception e) {
-            // Ignore
+        } catch (NuxeoException e) {
+            // Ignore: the key most likely does not exist, which is what we want
         }
 
         // Create
@@ -134,20 +139,20 @@ public class TestS3Handler {
         assertFalse(exists);
 
     }
-    
+
     @Test
     public void testObjectMetadata() throws Exception {
-        
+
         TestUtils.assumeAwsIsAvailable();
         JsonNode json = s3Handler.getObjectMetadataJson(TEST_FILE_KEY);
         assertNotNull(json);
-                
+
         JsonNode part = json.get("Content-Length");
         assertEquals(TEST_FILE_SIZE, part.asLong());
-        
+
         part = json.get("Content-Type");
         assertEquals("application/pdf", part.asText());
-        
+
         part = json.get("ETag");
         assertTrue(StringUtils.isNoneBlank(part.asText()));
     }
@@ -212,7 +217,7 @@ public class TestS3Handler {
         assertFalse(isInCache);
 
     }
-    
+
     @Test
     public void testBigObjectStream() throws Exception {
 
@@ -222,7 +227,7 @@ public class TestS3Handler {
 
         SequenceInputStream stream = s3Handler.getSequenceInputStream(boi.key, boi.pieceSize);
         assertNotNull(stream);
-        
+
         // Here we just check we have all the good amount
         long size = 0;
         long bytesLength;
@@ -238,26 +243,26 @@ public class TestS3Handler {
             size += bytesLength;
         } while (bytesLength > 0);
         assertEquals(boi.size, size);
-                
+
     }
-    
+
     /*
      * Check your aws-test-conf file, all is configured there
      */
     @Test
     public void testReadBytes() throws Exception {
-        
+
         TestUtils.assumeAwsIsAvailable();
         SimpleFeatureCustom.BigObjectInfo boi = new SimpleFeatureCustom.BigObjectInfo();
         Assume.assumeTrue("No big object info in the configuration file", boi.ok);
-        
+
         byte[] bytes = s3Handler.readBytes(boi.key, boi.readBytesStart, boi.readBytesLen);
         // Our test file is a pure text, change this unit test if it's different for you
         assertEquals(boi.readBytesLen, bytes.length);
-        
-        String resultStr = new String(bytes);
+
+        String resultStr = new String(bytes, StandardCharsets.UTF_8);
         assertEquals(boi.readBytesValue, resultStr);
-        
+
     }
 
 }

@@ -18,7 +18,10 @@
  */
 package org.nuxeo.s3utils.test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 
@@ -61,7 +64,7 @@ public class TestS3TempSignedUrl {
             TEST_FILE_KEY = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY);
             assertTrue("Missing " + SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_KEY,
                     StringUtils.isNotBlank(TEST_FILE_KEY));
-            
+
             TEST_FILE_NAME = FilenameUtils.getName(TEST_FILE_KEY);
 
             String sizeStr = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_OBJECT_SIZE);
@@ -78,8 +81,9 @@ public class TestS3TempSignedUrl {
     public void testGetTempSignedUrl() throws Exception {
 
         TestUtils.assumeAwsIsAvailable();
-        //String urlStr = s3Handler.buildPresignedUrl(TEST_FILE_KEY, 0, null, "filename=" + TEST_FILE_KEY);
-        String urlStr = s3Handler.buildPresignedUrl(TEST_FILE_KEY, 0, null, RFC2231.encodeContentDisposition(TEST_FILE_KEY, false, null));
+        // The 3 parameters encodeContentDisposition is deprecated for removal since 2025.18
+        String contentDisposition = RFC2231.encodeContentDisposition(TEST_FILE_KEY, false);
+        String urlStr = s3Handler.buildPresignedUrl(TEST_FILE_KEY, 0, null, contentDisposition);
         assertTrue(StringUtils.isNotBlank(urlStr));
 
         // We must be able to download the file without authentication

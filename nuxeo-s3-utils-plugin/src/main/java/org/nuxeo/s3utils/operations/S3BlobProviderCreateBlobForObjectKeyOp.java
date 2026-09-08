@@ -20,8 +20,6 @@ package org.nuxeo.s3utils.operations;
 
 import java.io.IOException;
 
-import org.apache.commons.lang3.StringUtils;
-import org.nuxeo.ecm.automation.OperationContext;
 import org.nuxeo.ecm.automation.core.Constants;
 import org.nuxeo.ecm.automation.core.annotations.Context;
 import org.nuxeo.ecm.automation.core.annotations.Operation;
@@ -45,7 +43,7 @@ import org.nuxeo.s3utils.S3UtilsBlobProvider;
 public class S3BlobProviderCreateBlobForObjectKeyOp {
 
     public static final String ID = "S3Utils.CreateBlobFromObjectKey";
-    
+
     @Context
     BlobManager blobManager;
 
@@ -60,12 +58,13 @@ public class S3BlobProviderCreateBlobForObjectKeyOp {
 
         S3UtilsBlobProvider blobProvider = (S3UtilsBlobProvider) blobManager.getBlobProvider(blobProviderId);
         if(blobProvider == null) {
-            throw new NuxeoException("The S3UtilsBlobProvider with id '" + blobProviderId + "' is not found. Did you contribute it in your XML?");
+            throw new NuxeoException("The S3UtilsBlobProvider with id '" + blobProviderId
+                    + "' is not found. Did you contribute it in your XML?");
         }
-        
+
         Blob b = blobProvider.createBlobFromObjectKey(objectKey);
         return b;
-        
+
     }
 
 }

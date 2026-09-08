@@ -47,7 +47,7 @@ import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
  * </ul>
  * Default value for the pieceSize is 100MB.<br>
  * Example of use:
- * 
+ *
  * <pre>
  * {@code
  *     S3ObjectSequentialStream seqStream = new S3ObjectSequentialStream(s3, "my-bucket", "bigbig-file.mov");
@@ -57,9 +57,9 @@ import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
  *     // . . . Loop on stream.read(bytes) . . .
  * }
  * </pre>
- * 
+ *
  * Thanks to Alex Chan and its original scala code (https://alexwlchan.net/2019/streaming-large-s3-objects/)
- * 
+ *
  * @since 2021.35
  */
 public class S3ObjectSequentialStream implements Enumeration<ResponseInputStream<GetObjectResponse>> {

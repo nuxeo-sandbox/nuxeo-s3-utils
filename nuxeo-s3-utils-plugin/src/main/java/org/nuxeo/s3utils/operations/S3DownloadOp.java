@@ -33,7 +33,7 @@ import org.nuxeo.s3utils.S3Handler;
  * Downloads a file from S3, using S3Handler <code>handlerName</code> (if empty, uses the default handler).
  * <p>
  * If <code>bucket</code> is empty, uses the bucket set in the handler configuration
- * 
+ *
  * @since 8.1
  */
 @Operation(id = S3DownloadOp.ID, category = Constants.CAT_BLOB, label = "S3 Utils: Download", description = "Downloads a file from S3, using S3Handler <code>handlerName</code> (if empty, uses the default handler). If <code>bucket</code> is empty, uses the bucket set in the handler configuration")
