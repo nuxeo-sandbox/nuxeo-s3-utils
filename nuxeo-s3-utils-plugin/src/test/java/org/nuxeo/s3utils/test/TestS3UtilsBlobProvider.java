@@ -122,10 +122,7 @@ public class TestS3UtilsBlobProvider {
     @Test
     public void testGetBlob() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?",
-                TestUtils.awsCredentialsLookOk());
-
+        TestUtils.assumeAwsIsAvailable();
         // Build a provider (not from XML)
         S3UtilsBlobProvider blobProvider = new S3UtilsBlobProvider();
         Map<String, String> properties = new HashMap<>();
@@ -149,10 +146,7 @@ public class TestS3UtilsBlobProvider {
     @Deploy("org.nuxeo.ecm.platform.convert")
     public void testGetBlobWithDownloadThreshold() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?",
-                TestUtils.awsCredentialsLookOk());
-
+        TestUtils.assumeAwsIsAvailable();
         // Build a provider (not from XML) with a download threshold
         S3UtilsBlobProvider blobProvider = new S3UtilsBlobProvider();
         Map<String, String> properties = new HashMap<>();
@@ -180,10 +174,7 @@ public class TestS3UtilsBlobProvider {
     @Test
     public void testGetBlobImageWithDownloadThreshold() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?",
-                TestUtils.awsCredentialsLookOk());
-
+        TestUtils.assumeAwsIsAvailable();
         // Had issue deploying the pdf2image converter in unit test (working fine in live testing)
         // Issue fixed, but I still let this test here for a while.
         if (!conversionService.getRegistredConverters().contains("pdf2image")) {
@@ -233,10 +224,7 @@ public class TestS3UtilsBlobProvider {
     @Deploy("nuxeo-s3-utils:test-s3-blobprovider.xml")
     public void testGetBlobWithXmlConfig() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?",
-                TestUtils.awsCredentialsLookOk());
-
+        TestUtils.assumeAwsIsAvailable();
         S3UtilsBlobProvider blobProvider = (S3UtilsBlobProvider) blobManager.getBlobProvider("TestS3BlobProvider-XML");
         assertNotNull(blobProvider);
 
@@ -257,10 +245,7 @@ public class TestS3UtilsBlobProvider {
     @Deploy("nuxeo-s3-utils:test-s3-blobprovider.xml")
     public void shouldCreateBlobFromKey() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?",
-                TestUtils.awsCredentialsLookOk());
-
+        TestUtils.assumeAwsIsAvailable();
         S3UtilsBlobProvider blobProvider = (S3UtilsBlobProvider) blobManager.getBlobProvider("TestS3BlobProvider-XML");
         assertNotNull(blobProvider);
 
@@ -282,10 +267,7 @@ public class TestS3UtilsBlobProvider {
     @Deploy("nuxeo-s3-utils:test-s3-blobprovider.xml")
     public void shouldHandleDocumentBlob() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?",
-                TestUtils.awsCredentialsLookOk());
-
+        TestUtils.assumeAwsIsAvailable();
         // Get the BlobProvider
         S3UtilsBlobProvider blobProvider = (S3UtilsBlobProvider) blobManager.getBlobProvider("TestS3BlobProvider-XML");
         assertNotNull(blobProvider);
@@ -315,10 +297,7 @@ public class TestS3UtilsBlobProvider {
     @Deploy("nuxeo-s3-utils:test-s3-blobprovider.xml")
     public void shouldDownloadPlaceHolderForBigBlob() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?",
-                TestUtils.awsCredentialsLookOk());
-
+        TestUtils.assumeAwsIsAvailable();
         // Get the BlobProvider
         S3UtilsBlobProvider blobProvider = (S3UtilsBlobProvider) blobManager.getBlobProvider(
                 "TestS3BlobProvider-withDownloadThreshold");
@@ -355,10 +334,7 @@ public class TestS3UtilsBlobProvider {
     @Deploy("nuxeo-s3-utils:test-s3-blobprovider.xml")
     public void shouldStreamTheBigObject() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?",
-                TestUtils.awsCredentialsLookOk());
-
+        TestUtils.assumeAwsIsAvailable();
         SimpleFeatureCustom.BigObjectInfo boi = new SimpleFeatureCustom.BigObjectInfo();
         Assume.assumeTrue("No big object info in the configuration file", boi.ok);
 
@@ -403,10 +379,7 @@ public class TestS3UtilsBlobProvider {
     @Deploy("nuxeo-s3-utils:test-s3-blobprovider.xml")
     public void shouldReadBytesFromBigObject() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?",
-                TestUtils.awsCredentialsLookOk());
-
+        TestUtils.assumeAwsIsAvailable();
         SimpleFeatureCustom.BigObjectInfo boi = new SimpleFeatureCustom.BigObjectInfo();
         Assume.assumeTrue("No big object info in the configuration file", boi.ok);
 

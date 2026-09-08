@@ -1,0 +1,41 @@
+# Configuration required to run the unit tests.
+#
+#   cp aws-test.conf.sample aws-test.conf
+#
+# then replace every YOUR-... placeholder with your own values.
+# aws-test.conf is git-ignored and must never be committed.
+#
+# This file holds NO credentials: see the README for authentication.
+# You need a bucket already containing three objects: a PDF, an image
+# and a large text file. The tests never create them.
+
+test.aws.region=us-east-1
+test.aws.s3.bucket=YOUR-BUCKET-NAME
+
+# Use the "key exists" cache during the tests (true|false)
+test.use.cache=true
+
+# A PDF that already exists in the bucket. Size is in bytes.
+test.object.key=YOUR-FOLDER/your-test-file.pdf
+test.object.size=0
+test.object.mimetype=application/pdf
+
+# An image that already exists in the bucket
+test.image.key=YOUR-FOLDER/your-test-image.jpg
+test.image.size=0
+test.image.mimetype=image/jpeg
+
+# A big object, to test the SequenceInputStream and the range reads.
+# pieceSize is the size of each sequential stream, in bytes (1MB here).
+test.bigobject.key=YOUR-FOLDER/your-big-test-file.txt
+test.bigobject.size=0
+test.bigobject.mimetype=text/plain
+test.bigobject.pieceSize=1048576
+# readbytes.value must be the exact string stored at
+# [start, start + len[ inside the big object
+test.bigobject.readbytes.start=0
+test.bigobject.readbytes.len=22
+test.bigobject.readbytes.value=HERE-THE-CHARS-TO-FIND
+
+# Key used to upload src/test/resources/Brief.pdf, then delete it
+test.upload.file.key=Brief.pdf

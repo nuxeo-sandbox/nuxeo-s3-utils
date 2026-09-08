@@ -20,6 +20,7 @@ package org.nuxeo.s3utils.test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -33,6 +34,7 @@ import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.junit.Assume;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.blob.ManagedBlob;
@@ -47,6 +49,53 @@ import software.amazon.awssdk.core.exception.SdkException;
 public class TestUtils {
 
     public static int credentialsLookOk = -1;
+
+    /**
+     * When this system property is <code>true</code>, a missing configuration file or missing AWS credentials makes the
+     * tests <i>fail</i> instead of being silently skipped.
+     * <p>
+     * Use it whenever you need the guarantee that the S3 code really ran:
+     *
+     * <pre>
+     * mvn test -Ds3utils.test.requireAws=true
+     * </pre>
+     *
+     * @since 2025.1
+     */
+    public static final String REQUIRE_AWS_PROPERTY = "s3utils.test.requireAws";
+
+    /**
+     * @return true if the caller asked for the S3 tests to fail rather than skip
+     * @since 2025.1
+     */
+    public static boolean requireAws() {
+        return Boolean.parseBoolean(System.getProperty(REQUIRE_AWS_PROPERTY, "false"));
+    }
+
+    /**
+     * Single entry point guarding every test that needs a real S3 connection.
+     * <p>
+     * By default a missing configuration or missing credentials <i>skips</i> the test, which means a green build does
+     * not prove the S3 code was exercised: always check for "Skipped: 0" in the surefire output. Run with
+     * <code>-D{@value #REQUIRE_AWS_PROPERTY}=true</code> to turn those skips into failures.
+     *
+     * @since 2025.1
+     */
+    public static void assumeAwsIsAvailable() {
+
+        boolean hasConfiguration = SimpleFeatureCustom.hasLocalTestConfiguration();
+        String noConfMessage = "No custom configuration file (" + SimpleFeatureCustom.TEST_CONF_FILE
+                + ") and no environment variable => no test";
+        String noCredentialsMessage = "Connection to AWS is failing. Are your credentials correctly set?";
+
+        if (requireAws()) {
+            assertTrue(noConfMessage, hasConfiguration);
+            assertTrue(noCredentialsMessage, awsCredentialsLookOk());
+        } else {
+            Assume.assumeTrue(noConfMessage, hasConfiguration);
+            Assume.assumeTrue(noCredentialsMessage, awsCredentialsLookOk());
+        }
+    }
 
     /**
      * We return fails only if we get an error related to credentials while trying to connect to an s3 bucket.

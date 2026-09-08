@@ -35,59 +35,27 @@ import org.nuxeo.s3utils.S3Handler;
 
 
 /**
- * We don't want to hard code the bucket name or the distant object key, since
- * everyone will have a different one. There are two ways to inject the values
- * for testing:
+ * We don't want to hard code the bucket name or the distant object key, since everyone will have a different one.
+ * There are two ways to inject the values for testing:
  * <ul>
- * <li>Use environment variables: Setup your environment and inject the expected
- * variables. This would be used when automating testing with maven for example
- * (passing the env. variables to maven)</li>
- * <li>Use the (git ignored) "aws-test.conf" file:
- * <ul>
- * <li>We have a file named aws-test.conf at
- * nuxeo-s3utils-plugin/src/test/resources/</li>
- * <li>The file declares the region, the bucket, distant object key, ... using the
- * keys defined below (TEST_CONF_KEY_NAME_AWS_KEY_ID, etc.)</li>
- * <li>The .gitignore config file ignores this file, so it is not sent on
- * GitHub</li>
+ * <li>The (git ignored) <code>aws-test.conf</code> file at
+ * <code>nuxeo-s3-utils-plugin/src/test/resources/</code>. Copy <code>aws-test.conf.sample</code>, which sits next to
+ * it, and fill in your own values. This is the recommended way.</li>
+ * <li>Environment variables, used when the file is missing. Each key has an upper snake case equivalent:
+ * <code>test.aws.region</code> is read from <code>TEST_AWS_REGION</code>, <code>test.object.key</code> from
+ * <code>TEST_OBJECT_KEY</code>, etc. (the original dotted names are still accepted, but a POSIX shell cannot export
+ * them). This is what a CI job would use.</li>
  * </ul>
- * </li>
- * </ul>
- * So, basically to run the test, create this file at
- * nuxeo-s3utils-plugin/src/test/resources/ and set the following properties:
- *
- * <pre>
- * {@code
- * test.aws.region=the-region
- * test.aws.s3.bucket=the-bucket
- * test.use.cache=true
- * 
- * #This file exists in this bucket
- * test.object.key=used-in-unit-test-do-not-change.pdf
- * test.object.size=135377
- * test.object.mimetype=application/pdf
- * test.image.key=used-in-unit-test-do-not-change.jpg
- * test.image.size=879394
- * test.image.mimetype=image/jpeg
- * 
- * # This file is for the test of the SequenceInputStream
- * # 11.1MB, chunck of 1MB
- * test.bigobject.key=used-in-unit-test-do-not-change-big.txt
- * test.bigobject.size=10264037
- * test.bigobject.mimetype=text/plain
- * test.bigobject.pieceSize=1048576
- * test.bigobject.readbytes.start=5000000
- * test.bigobject.readbytes.len=22
- * test.bigobject.readbytes.value=HERE-THE_CHARS-TO-FIND
- * 
- * # For upload
- * test.upload.file.key=Brief.pdf
- * }
- * </pre>
- * </ul>
- * Whatever you choose, the properties will be loaded and set in the
- * environment, so the "default" S3Handler contribution (see
- * s3-utils-service.xml) will use them.
+ * See <code>aws-test.conf.sample</code> for the list of keys and what each one means, and the README for the
+ * authentication part. <b>No credential is ever read from this file</b>: they come from the standard AWS credentials
+ * chain.
+ * <p>
+ * Whatever you choose, the properties are loaded and set as system properties, so the "default" S3Handler contribution
+ * (see s3-utils-service.xml) will use them.
+ * <p>
+ * <b>IMPORTANT</b>: When the configuration or the credentials are missing, the tests do not fail, they are
+ * <i>skipped</i> (see {@link TestUtils#assumeAwsIsAvailable()}). Run with
+ * <code>-Ds3utils.test.requireAws=true</code> to turn these skips into failures.
  *
  * @since 8.1
  */
@@ -152,9 +120,16 @@ public class SimpleFeatureCustom implements RunnerFeature {
         FileInputStream fileInput = null;
         try {
             file = FileUtils.getResourceFileFromContext(TEST_CONF_FILE);
-            fileInput = new FileInputStream(file);
-            props = new Properties();
-            props.load(fileInput);
+            if (file == null || !file.exists()) {
+                // Not an error: the environment variables are then used instead
+                System.out.println("No '" + TEST_CONF_FILE
+                        + "' file in the test resources, looking for environment variables instead.");
+                props = null;
+            } else {
+                fileInput = new FileInputStream(file);
+                props = new Properties();
+                props.load(fileInput);
+            }
 
         } catch (Exception e) {
             // Do not fail silently: without this, every S3 test skips with no explanation
@@ -198,12 +173,26 @@ public class SimpleFeatureCustom implements RunnerFeature {
 
         if (props != null) {
 
+            /*
+             * Region and bucket are the only two mandatory values: without them the "default" S3Handler cannot even be
+             * built. Rather than failing with a NullPointerException below (which is what a partial environment used to
+             * produce), we report the problem and behave as if there were no configuration at all, so the tests skip
+             * cleanly.
+             */
+            String region = props.getProperty(TEST_CONF_KEY_NAME_AWS_REGION);
+            String bucket = props.getProperty(TEST_CONF_KEY_NAME_AWS_S3_BUCKET);
+            if (StringUtils.isAnyBlank(region, bucket)) {
+                System.err.println("The test configuration is incomplete, '" + TEST_CONF_KEY_NAME_AWS_REGION + "' and '"
+                        + TEST_CONF_KEY_NAME_AWS_S3_BUCKET + "' are both required: the S3 tests will be skipped.");
+                props = null;
+                return;
+            }
+
             Properties systemProps = System.getProperties();
-            systemProps.setProperty(Constants.CONF_KEY_NAME_REGION, props.getProperty(TEST_CONF_KEY_NAME_AWS_REGION));
-            systemProps.setProperty(Constants.CONF_KEY_NAME_BUCKET,
-                    props.getProperty(TEST_CONF_KEY_NAME_AWS_S3_BUCKET));
+            systemProps.setProperty(Constants.CONF_KEY_NAME_REGION, region);
+            systemProps.setProperty(Constants.CONF_KEY_NAME_BUCKET, bucket);
             systemProps.setProperty(Constants.CONF_KEY_NAME_USECACHEFOREXISTSKEY,
-                    props.getProperty(TEST_CONF_KEY_NAME_USE_CACHE));
+                    props.getProperty(TEST_CONF_KEY_NAME_USE_CACHE, "false"));
 
             systemProps.setProperty("nuxeo.aws.s3utils.minimumUploadPartSize", "0");
             systemProps.setProperty("nuxeo.aws.s3utils.multipartUploadThreshold", "0");
@@ -220,8 +209,23 @@ public class SimpleFeatureCustom implements RunnerFeature {
         p.remove(Constants.CONF_KEY_NAME_USECACHEFOREXISTSKEY);
     }
 
+    /**
+     * Converts a configuration key to its environment variable equivalent, ie. <code>test.aws.region</code> becomes
+     * <code>TEST_AWS_REGION</code>. A POSIX shell cannot export a variable whose name contains a dot, so the dotted
+     * names alone made the fallback unusable.
+     *
+     * @since 2025.1
+     */
+    protected static String toEnvVarName(String key) {
+        return key.toUpperCase().replace('.', '_');
+    }
+
     protected void addEnvironmentVariable(String key) {
-        String value = System.getenv(key);
+        // Upper snake case first, then the historical dotted name
+        String value = System.getenv(toEnvVarName(key));
+        if (value == null) {
+            value = System.getenv(key);
+        }
         if (value != null) {
             if (props == null) {
                 props = new Properties();

@@ -24,7 +24,6 @@ import java.io.File;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -78,9 +77,7 @@ public class TestS3TempSignedUrl {
     @Test
     public void testGetTempSignedUrl() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
-
+        TestUtils.assumeAwsIsAvailable();
         //String urlStr = s3Handler.buildPresignedUrl(TEST_FILE_KEY, 0, null, "filename=" + TEST_FILE_KEY);
         String urlStr = s3Handler.buildPresignedUrl(TEST_FILE_KEY, 0, null, RFC2231.encodeContentDisposition(TEST_FILE_KEY, false, null));
         assertTrue(StringUtils.isNotBlank(urlStr));
@@ -101,9 +98,7 @@ public class TestS3TempSignedUrl {
     @Test
     public void testTempSignedUrlShouldFail() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
-
+        TestUtils.assumeAwsIsAvailable();
         int duration = 2; // 2 seconds, not 20 minutes or whatever S3TempSignedURLBuilder.DEFAULT_EXPIRE is
 
         String urlStr = s3Handler.buildPresignedUrl(TEST_FILE_KEY, duration, null, "filename=" + TEST_FILE_KEY);

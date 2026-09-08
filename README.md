@@ -58,6 +58,7 @@ Two behaviour notes:
     * [Streaming an Object](#streaming-an-object)
     * [Temporary Signed URL](#temporary-signed-url)
 - [Build and Install](#build-and-install)
+- [Running the Unit Tests](#running-the-unit-tests)
 - [Licensing](#licensing)
 - [Support](#support)
 - [About Hyland-Nuxeo](#about-nuxeo)
@@ -82,12 +83,9 @@ The plugin uses Nuxeo AWS Credential code to handle authentication (the `NuxeoAW
 * Use nuxeo configuration parameters/XML extension point to set up your AWS credentials (see https://doc.nuxeo.com/nxdoc/amazon-s3-online-storage/)
 * Be already authenticated and/or you have setup the expected AWS environment variables before starting Nuxeo (or running the unit tests). This would be the case if, for example, Nuxeo is running from an EC2 instance on AWS (and this instance has permission to access the bucket(s))
 
-For example, one way to run unit tests is to (in a terminal):
-
-* Authenticate to AWS (like, run `aws s3 ls` and authenticate)
-* Then, run `mvn install`
-
 If Nuxeo is deployed on an EC2 instance on AWS, it automatically gets the authentication and role from the instance.
+
+To run the unit tests, see [Running the Unit Tests](#running-the-unit-tests).
 
 **IMPORTANT**: Of course, authentication drives permission, you must make sure the account (or the EC2 instance running) has permission to download, upload, delete, ... in the bucket(s).
 
@@ -416,8 +414,7 @@ Assuming [maven](http://maven.apache.org/) is installed on your system, after do
 
 
 * Installation with unit-test (recommended):
-  * Add an `aws-test.conf` file containing the required information (region, S3 bucket, file to test and its size). See details in `SimpleFeatureCustom`
-  * Be pre-authenticated in the terminal
+  * Set up the tests as explained in [Running the Unit Tests](#running-the-unit-tests)
   * Then, in the terminal, run
 
   ```
@@ -436,6 +433,74 @@ Assuming [maven](http://maven.apache.org/) is installed on your system, after do
 
 The NuxeoPackage is in `nuxeo-s3-utils-mp/target`, named `nuxeo-s3-utils-mp-{version}.zip`. It can be [installed from the Admin Center](https://doc.nuxeo.com/x/moFH) (see the "Offline Installation" topic), or from the commandline using `nuxeoctl mp-install`.
 
+
+
+
+## Running the Unit Tests
+
+The tests run against a **real S3 bucket**: there is no mock and no emulator. They need two independent things, the test data configuration and the AWS credentials.
+
+### 1. The configuration file
+
+Copy the sample and fill it in:
+
+```
+cd nuxeo-s3-utils-plugin/src/test/resources
+cp aws-test.conf.sample aws-test.conf
+```
+
+`aws-test.conf` is git-ignored and must never be committed. It contains **no credentials**, only the region, the bucket and the description of the objects to test against.
+
+The bucket must already contain three objects, the tests never create them:
+
+| Key | What it must be |
+| --- | --- |
+| `test.object.key` | A PDF. `test.object.size` is its exact size in bytes |
+| `test.image.key` | An image (jpeg) |
+| `test.bigobject.key` | A large text file, used to test the streaming and the byte-range reads. `test.bigobject.readbytes.value` must be the exact string stored at `[start, start + len[` |
+
+See `aws-test.conf.sample` for the full list of keys, each one documented.
+
+Alternatively, and typically for a CI job, every key can be provided as an **environment variable**, using its upper snake case name: `test.aws.region` becomes `TEST_AWS_REGION`, `test.object.key` becomes `TEST_OBJECT_KEY`, etc. Environment variables are only read when `aws-test.conf` is absent.
+
+### 2. The AWS credentials
+
+Credentials never appear in `aws-test.conf`. The plugin uses `NuxeoAWSCredentialsProvider`, which falls back to the standard AWS credentials chain, so anything that authenticates the AWS CLI works. Pick one:
+
+* `aws sso login`, then run the tests in the same terminal
+* `AWS_PROFILE=my-profile mvn test`, if you have several profiles
+* The usual `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (/ `AWS_SESSION_TOKEN`) environment variables
+* Nothing at all when running on an EC2 instance whose role can access the bucket
+
+A quick way to check you are authenticated: `aws s3 ls s3://your-bucket` must succeed.
+
+> **Note about AWS SSO**: unlike the v1 SDK, the AWS SDK v2 can only resolve an SSO profile when the `software.amazon.awssdk:sso` and `ssooidc` modules are on the classpath. They are declared as `test` scope dependencies in `nuxeo-s3-utils-plugin/pom.xml` for exactly this reason. They are deliberately *not* shipped in the Marketplace Package, since a server authenticates with a role or with static credentials.
+
+### 3. Run them
+
+```
+cd /path/to/nuxeo-s3-utils
+mvn clean install
+```
+
+### IMPORTANT: a green build does not mean the tests ran
+
+When the configuration or the credentials are missing, the S3 tests are **skipped, not failed**, and the build is still green. Always check the count:
+
+```
+Tests run: 28, Failures: 0, Errors: 0, Skipped: 0    <- the S3 code really ran
+Tests run: 28, Failures: 0, Errors: 0, Skipped: 28   <- nothing was tested
+```
+
+To make this impossible to miss, run with:
+
+```
+mvn clean install -Ds3utils.test.requireAws=true
+```
+
+which turns those skips into explicit failures. This is the recommended setting for any automated build.
+
+Note that the GitHub workflows in `.github/workflows` do not provide any AWS credentials, so every S3 test is skipped there.
 
 
 ## Licensing

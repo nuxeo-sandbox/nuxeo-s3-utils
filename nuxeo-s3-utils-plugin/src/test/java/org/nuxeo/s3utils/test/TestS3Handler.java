@@ -87,9 +87,7 @@ public class TestS3Handler {
     @Test
     public void testDownloadFile() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
-
+        TestUtils.assumeAwsIsAvailable();
         Blob result = s3Handler.downloadFile(TEST_FILE_KEY, (String) null);
         assertNotNull(result);
 
@@ -106,9 +104,7 @@ public class TestS3Handler {
     @Test
     public void testUploadAndDelete() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
-
+        TestUtils.assumeAwsIsAvailable();
         String uploadKey = null;
         uploadKey = SimpleFeatureCustom.getLocalProperty(SimpleFeatureCustom.TEST_CONF_KEY_NAME_UPLOAD_FILE_KEY);
         Assume.assumeTrue("No parameter for upload/delet test => no test", StringUtils.isNotBlank(uploadKey));
@@ -142,9 +138,7 @@ public class TestS3Handler {
     @Test
     public void testObjectMetadata() throws Exception {
         
-        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
-
+        TestUtils.assumeAwsIsAvailable();
         JsonNode json = s3Handler.getObjectMetadataJson(TEST_FILE_KEY);
         assertNotNull(json);
                 
@@ -161,9 +155,7 @@ public class TestS3Handler {
     @Test
     public void testExistsKeyInS3() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
-
+        TestUtils.assumeAwsIsAvailable();
         boolean ok;
 
         ok = s3Handler.existsKeyInS3(TEST_FILE_KEY);
@@ -178,9 +170,7 @@ public class TestS3Handler {
     @Test
     public void testCacheForKeyExists() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
-
+        TestUtils.assumeAwsIsAvailable();
         boolean exists, isInCache;
 
         CacheForKeyExists cache = new CacheForKeyExists(s3Handler);
@@ -226,9 +216,7 @@ public class TestS3Handler {
     @Test
     public void testBigObjectStream() throws Exception {
 
-        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
-        
+        TestUtils.assumeAwsIsAvailable();
         SimpleFeatureCustom.BigObjectInfo boi = new SimpleFeatureCustom.BigObjectInfo();
         Assume.assumeTrue("No big object info in the configuration file", boi.ok);
 
@@ -259,9 +247,7 @@ public class TestS3Handler {
     @Test
     public void testReadBytes() throws Exception {
         
-        Assume.assumeTrue("No custom configuration file => no test", SimpleFeatureCustom.hasLocalTestConfiguration());
-        Assume.assumeTrue("Connection to AWS is failing. Are your credentials correctly set?", TestUtils.awsCredentialsLookOk());
-        
+        TestUtils.assumeAwsIsAvailable();
         SimpleFeatureCustom.BigObjectInfo boi = new SimpleFeatureCustom.BigObjectInfo();
         Assume.assumeTrue("No big object info in the configuration file", boi.ok);
         
