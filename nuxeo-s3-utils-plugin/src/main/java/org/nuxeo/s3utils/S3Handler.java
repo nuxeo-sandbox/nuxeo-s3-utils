@@ -27,12 +27,13 @@ import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.runtime.api.Framework;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 /**
  * Interface to be used by any S3Handler.
@@ -77,10 +78,10 @@ public interface S3Handler extends S3ObjectStreaming {
     public void setBucket(String inBucket);
 
     /**
-     * @return the AmazonS3 instance created for this handler
+     * @return the S3Client instance created for this handler
      * @since 8.2
      */
-    public AmazonS3 getS3();
+    public S3Client getS3();
 
     /**
      * Uploads inFile to S3, using the "Current bucket"
@@ -257,7 +258,7 @@ public interface S3Handler extends S3ObjectStreaming {
      * @return
      * @since TODO
      */
-    public ObjectMetadata getObjectMetadata(String inKey);
+    public HeadObjectResponse getObjectMetadata(String inKey);
 
     /**
      * Gets the object metadata without fetching the object itself.
@@ -324,22 +325,22 @@ public interface S3Handler extends S3ObjectStreaming {
 
         String message = "";
 
-        if (e instanceof AmazonServiceException) {
-            AmazonServiceException ase = (AmazonServiceException) e;
-            message = "Caught an AmazonServiceException, which " + "means your request made it "
+        if (e instanceof AwsServiceException ase) {
+            message = "Caught an AwsServiceException, which " + "means your request made it "
                     + "to Amazon S3, but was rejected with an error response" + " for some reason.";
             message += "\nError Message:    " + ase.getMessage();
-            message += "\nHTTP Status Code: " + ase.getStatusCode();
-            message += "\nAWS Error Code:   " + ase.getErrorCode();
-            message += "\nError Type:       " + ase.getErrorType();
-            message += "\nRequest ID:       " + ase.getRequestId();
+            message += "\nHTTP Status Code: " + ase.statusCode();
+            if (ase.awsErrorDetails() != null) {
+                message += "\nAWS Error Code:   " + ase.awsErrorDetails().errorCode();
+                message += "\nService Name:     " + ase.awsErrorDetails().serviceName();
+            }
+            message += "\nRequest ID:       " + ase.requestId();
 
-        } else if (e instanceof AmazonClientException) {
-            AmazonClientException ace = (AmazonClientException) e;
-            message = "Caught an AmazonClientException, which " + "means the client encountered "
+        } else if (e instanceof SdkException sdke) {
+            message = "Caught an SdkException, which " + "means the client encountered "
                     + "an internal error while trying to " + "communicate with S3, "
                     + "such as not being able to access the network.";
-            message += "\nError Message: " + ace.getMessage();
+            message += "\nError Message: " + sdke.getMessage();
 
         } else {
             message = e.getMessage();
@@ -355,10 +356,10 @@ public interface S3Handler extends S3ObjectStreaming {
      * @return true if the error is "MIssing Key" error
      * @since 8.2
      */
-    public static boolean errorIsMissingKey(AmazonClientException e) {
-        if (e instanceof AmazonServiceException) {
-            AmazonServiceException ase = (AmazonServiceException) e;
-            return (ase.getStatusCode() == 404) || "NoSuchKey".equals(ase.getErrorCode())
+    public static boolean errorIsMissingKey(SdkException e) {
+        if (e instanceof AwsServiceException ase) {
+            String errorCode = ase.awsErrorDetails() == null ? null : ase.awsErrorDetails().errorCode();
+            return ase.statusCode() == 404 || "NoSuchKey".equals(errorCode) || "NotFound".equals(errorCode)
                     || "Not Found".equals(e.getMessage());
         }
         return false;

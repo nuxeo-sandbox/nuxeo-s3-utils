@@ -25,7 +25,7 @@ import org.nuxeo.common.xmap.annotation.XObject;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.aws.AWSConfigurationService;
 
-import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
+import software.amazon.awssdk.regions.Region;
 
 /**
  * Class handling the S3Handler contribution. Here is an example of XML contribution. Notice that we use an expression (
@@ -42,8 +42,7 @@ import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
  *     <tempSignedUrlDuration>${nuxeo.aws.s3utils.duration:=}</tempSignedUrlDuration>
  *     <useCacheForExistsKey>${nuxeo.aws.s3utils.use_cache_for_exists_key:=}</useCacheForExistsKey>
  *     
- *     <!-- No values => Use the default AWS SDK config (com.amazonaws.services.s3.transfer.TransferManagerConfiguration) -->
- *     <!-- Here, we set the values as the default values for the current AWS SDK -->
+ *     <!-- No values (or 0) => Use the AWS SDK defaults -->
  *     <!-- 5MB (5242880) -->
  *     <minimumUploadPartSize>${nuxeo.aws.s3utils.minimumUploadPartSize:=}</minimumUploadPartSize>
  *     <!-- 16MB (16777216) -->
@@ -57,6 +56,20 @@ import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
  */
 @XObject("s3Handler")
 public class S3HandlerDescriptor {
+
+    /**
+     * Default minimum upload part size, 5MB. Same value as the one the AWS SDK applies.
+     *
+     * @since 2025.1
+     */
+    public static final long MINIMUM_UPLOAD_PART_SIZE_DEFAULT = 5L * 1024 * 1024;
+
+    /**
+     * Default multipart upload threshold, 16MB. Same value as the one the AWS SDK applies.
+     *
+     * @since 2025.1
+     */
+    public static final long MULTIPART_UPLOAD_THRESHOLD_DEFAULT = 16L * 1024 * 1024;
 
     @XNode("name")
     protected String name = "";
@@ -85,8 +98,6 @@ public class S3HandlerDescriptor {
     protected int signedUrlDuration = -1;
 
     protected int useExistsKeyCache = -1;
-    
-    protected TransferManagerConfiguration transferManagerConfiguration = new TransferManagerConfiguration();
 
     public String getName() {
         return name;
@@ -95,23 +106,19 @@ public class S3HandlerDescriptor {
     public Class<?> getKlass() {
         return klass;
     }
-    
+
     public String getRegion() {
-        System.out.println("REGION 1: " + region);
-        if(StringUtils.isBlank(region)) {
+        if (StringUtils.isBlank(region)) {
             region = Framework.getProperty(Constants.CONF_KEY_NAME_REGION);
-            System.out.println("REGION 2: " + region);
-            if(StringUtils.isBlank(region)) {
-                region = Framework.getService(AWSConfigurationService.class).getAWSRegion();
-            }
-            System.out.println("REGION 3: " + region);
-            if(StringUtils.isBlank(region)) {
-                Framework.getProperty("nuxeo.aws.region");
-            }
         }
-        
-        System.out.println("REGION FINAL: " + region);
-        
+        if (StringUtils.isBlank(region)) {
+            Region awsRegion = Framework.getService(AWSConfigurationService.class).getAwsRegion();
+            region = awsRegion == null ? null : awsRegion.id();
+        }
+        if (StringUtils.isBlank(region)) {
+            region = Framework.getProperty("nuxeo.aws.region");
+        }
+
         return region;
     }
 
@@ -133,9 +140,10 @@ public class S3HandlerDescriptor {
 
     public int getTempSignedUrlDuration() {
         if (signedUrlDuration < 0) {
-            if (!tempSignedUrlDuration.isEmpty()) {
+            String duration = tempSignedUrlDuration == null ? "" : tempSignedUrlDuration.trim();
+            if (!duration.isEmpty()) {
                 try {
-                    signedUrlDuration = (int) Long.parseLong(tempSignedUrlDuration);
+                    signedUrlDuration = (int) Long.parseLong(duration);
                 } catch (NumberFormatException e) {
                     signedUrlDuration = -1;
                 }
@@ -148,18 +156,18 @@ public class S3HandlerDescriptor {
     }
     
     public long getMinimumUploadPartSize() {
-        if(minimumUploadPartSize == 0) {
-            minimumUploadPartSize = transferManagerConfiguration.getMinimumUploadPartSize();
+        if (minimumUploadPartSize == null || minimumUploadPartSize <= 0) {
+            minimumUploadPartSize = MINIMUM_UPLOAD_PART_SIZE_DEFAULT;
         }
-        
+
         return minimumUploadPartSize;
     }
-    
+
     public long getMultipartUploadThreshold() {
-        if(multipartUploadThreshold == 0) {
-            multipartUploadThreshold = transferManagerConfiguration.getMultipartUploadThreshold();
+        if (multipartUploadThreshold == null || multipartUploadThreshold <= 0) {
+            multipartUploadThreshold = MULTIPART_UPLOAD_THRESHOLD_DEFAULT;
         }
-        
+
         return multipartUploadThreshold;
     }
 

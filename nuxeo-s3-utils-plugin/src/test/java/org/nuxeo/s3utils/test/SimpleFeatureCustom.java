@@ -33,7 +33,6 @@ import org.nuxeo.runtime.test.runner.RunnerFeature;
 import org.nuxeo.s3utils.Constants;
 import org.nuxeo.s3utils.S3Handler;
 
-import com.amazonaws.SdkClientException;
 
 /**
  * We don't want to hard code the bucket name or the distant object key, since
@@ -158,6 +157,8 @@ public class SimpleFeatureCustom implements RunnerFeature {
             props.load(fileInput);
 
         } catch (Exception e) {
+            // Do not fail silently: without this, every S3 test skips with no explanation
+            System.err.println("Could not load the '" + TEST_CONF_FILE + "' test configuration file: " + e);
             props = null;
         } finally {
             if (fileInput != null) {

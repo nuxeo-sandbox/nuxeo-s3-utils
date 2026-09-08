@@ -20,52 +20,54 @@ package org.nuxeo.s3utils;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.util.Date;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletionException;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.api.impl.blob.FileBlob;
+import org.nuxeo.runtime.aws.NuxeoAWSCredentialsProvider;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.HttpMethod;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
-import com.amazonaws.services.s3.transfer.Download;
-import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
-import com.amazonaws.services.s3.transfer.Upload;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.nuxeo.runtime.aws.NuxeoAWSCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.awssdk.transfer.s3.model.DownloadFileRequest;
+import software.amazon.awssdk.transfer.s3.model.FileDownload;
+import software.amazon.awssdk.transfer.s3.model.FileUpload;
+import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
 /**
- * Wrapper class around AmazonS3
+ * Wrapper class around the AWS SDK v2 S3Client
  *
  * @since 8.1
  */
 public class S3HandlerImpl implements S3Handler {
 
-    protected static final Log log = LogFactory.getLog(S3HandlerImpl.class);
+    protected static final Logger log = LogManager.getLogger(S3HandlerImpl.class);
 
     protected String name;
 
@@ -77,9 +79,13 @@ public class S3HandlerImpl implements S3Handler {
 
     protected boolean useCacheForExistsKey;
 
-    protected AmazonS3 s3;
+    protected S3Client s3;
 
-    protected TransferManager transferManager;
+    protected S3AsyncClient s3Async;
+
+    protected S3TransferManager transferManager;
+
+    protected AwsCredentialsProvider credentialsProvider;
 
     protected CacheForKeyExists keyExistsCache = null;
 
@@ -110,25 +116,32 @@ public class S3HandlerImpl implements S3Handler {
 
     protected void setup(S3HandlerDescriptor desc) {
 
-        AWSCredentialsProvider awsCredentialsProvider = NuxeoAWSCredentialsProvider.getInstance();
-        s3 = AmazonS3ClientBuilder.standard()
-                                  .withCredentials(awsCredentialsProvider)
-                                  // .withClientConfiguration(HERE SOME CONFIG?)
-                                  .withRegion(region)
-                                  .build();
+        credentialsProvider = NuxeoAWSCredentialsProvider.getInstance();
+        Region awsRegion = Region.of(region);
 
-        transferManager = TransferManagerBuilder.standard()
-                                                .withS3Client(s3)
-                                                .withMinimumUploadPartSize(minimumUploadPartSize)
-                                                .withMultipartUploadThreshold(multipartUploadThreshold)
-                                                /*
-                                                 * .withMultipartCopyThreshold(Long.valueOf(getLongProperty(
-                                                 * MULTIPART_COPY_THRESHOLD_PROPERTY,
-                                                 * MULTIPART_COPY_THRESHOLD_DEFAULT)))
-                                                 * .withMultipartCopyPartSize(Long.valueOf(getMultipartCopyPartSize()))
-                                                 */
-                                                .withAlwaysCalculateMultipartMd5(true)
-                                                .build();
+        s3 = S3Client.builder()
+                     .region(awsRegion)
+                     .credentialsProvider(credentialsProvider)
+                     .httpClient(ApacheHttpClient.builder().build())
+                     .build();
+
+        /*
+         * In the AWS SDK v1, the TransferManager accepted 0 for these two values, meaning "use the SDK defaults". The
+         * v2 CRT client rejects 0, so we substitute the very same defaults the SDK used to apply.
+         */
+        long partSize = minimumUploadPartSize > 0 ? minimumUploadPartSize
+                : S3HandlerDescriptor.MINIMUM_UPLOAD_PART_SIZE_DEFAULT;
+        long threshold = multipartUploadThreshold > 0 ? multipartUploadThreshold
+                : S3HandlerDescriptor.MULTIPART_UPLOAD_THRESHOLD_DEFAULT;
+
+        s3Async = S3AsyncClient.crtBuilder()
+                               .region(awsRegion)
+                               .credentialsProvider(credentialsProvider)
+                               .minimumPartSizeInBytes(partSize)
+                               .thresholdInBytes(threshold)
+                               .build();
+
+        transferManager = S3TransferManager.builder().s3Client(s3Async).build();
 
         if (useCacheForExistsKey) {
             keyExistsCache = new CacheForKeyExists(this);
@@ -142,86 +155,95 @@ public class S3HandlerImpl implements S3Handler {
             keyExistsCache.cleanup();
             keyExistsCache = null;
         }
+        if (transferManager != null) {
+            transferManager.close();
+            transferManager = null;
+        }
+        if (s3Async != null) {
+            s3Async.close();
+            s3Async = null;
+        }
+        if (s3 != null) {
+            s3.close();
+            s3 = null;
+        }
     }
 
     @Override
     public boolean sendFile(String inKey, File inFile) throws NuxeoException {
 
-        boolean ok = false;
         try {
-            // s3.putObject(new PutObjectRequest(currentBucket, inKey, inFile));
-
-            Upload upload = transferManager.upload(currentBucket, inKey, inFile);
+            UploadFileRequest uploadFileRequest = UploadFileRequest.builder()
+                                                                   .putObjectRequest(
+                                                                           b -> b.bucket(currentBucket).key(inKey))
+                                                                   .source(inFile)
+                                                                   .build();
+            FileUpload upload = transferManager.uploadFile(uploadFileRequest);
             // Be synchronous
-            upload.waitForCompletion();
-            ok = true;
-        } catch (AmazonServiceException ase) {
-            String message = S3Handler.buildDetailedMessageFromAWSException(ase);
-            throw new NuxeoException(message);
-
-        } catch (AmazonClientException ace) {
-            String message = S3Handler.buildDetailedMessageFromAWSException(ace);
-            throw new NuxeoException(message);
-        } catch (InterruptedException ie) {
-            String message = S3Handler.buildDetailedMessageFromAWSException(ie);
-            throw new NuxeoException(message);
+            upload.completionFuture().join();
+        } catch (CompletionException ce) {
+            throw new NuxeoException(S3Handler.buildDetailedMessageFromAWSException(unwrap(ce)));
+        } catch (SdkException se) {
+            throw new NuxeoException(S3Handler.buildDetailedMessageFromAWSException(se));
         }
 
-        return ok;
+        return true;
     }
 
     @Override
     public Blob downloadFile(String inKey, File inDestFile) {
 
-        ObjectMetadata metadata = null;
+        HeadObjectResponse metadata;
 
         try {
-            GetObjectRequest gor = new GetObjectRequest(currentBucket, inKey);
-            // metadata = s3.getObject(gor, blob.getFile());
-            Download download = transferManager.download(gor, inDestFile);
-            download.waitForCompletion();
-            metadata = download.getObjectMetadata();
+            GetObjectRequest gor = GetObjectRequest.builder().bucket(currentBucket).key(inKey).build();
+            DownloadFileRequest downloadFileRequest = DownloadFileRequest.builder()
+                                                                         .getObjectRequest(gor)
+                                                                         .destination(inDestFile)
+                                                                         .build();
+            FileDownload download = transferManager.downloadFile(downloadFileRequest);
+            /*
+             * The GetObjectResponse and the HeadObjectResponse expose the same set of accessors we need here, but they
+             * are unrelated types. We therefore re-read the metadata rather than mapping field by field.
+             */
+            download.completionFuture().join();
+            metadata = getObjectMetadata(inKey);
 
-        } catch (AmazonServiceException ase) {
-            String message = S3Handler.buildDetailedMessageFromAWSException(ase);
-            throw new NuxeoException(message);
-
-        } catch (AmazonClientException ace) {
-            String message = S3Handler.buildDetailedMessageFromAWSException(ace);
-            throw new NuxeoException(message);
-
-        } catch (InterruptedException ie) {
-            String message = S3Handler.buildDetailedMessageFromAWSException(ie);
-            throw new NuxeoException(message);
+        } catch (CompletionException ce) {
+            throw new NuxeoException(S3Handler.buildDetailedMessageFromAWSException(unwrap(ce)));
+        } catch (SdkException se) {
+            throw new NuxeoException(S3Handler.buildDetailedMessageFromAWSException(se));
         }
 
         Blob blob = new FileBlob(inDestFile);
-        blob.setDigest(metadata.getETag());
-        blob.setEncoding(metadata.getContentEncoding());
+        blob.setDigest(cleanETag(metadata.eTag()));
+        blob.setEncoding(metadata.contentEncoding());
         blob.setFilename(inDestFile.getName());
-        blob.setMimeType(metadata.getContentType());
+        blob.setMimeType(metadata.contentType());
 
         return blob;
     }
 
     @Override
     public SequenceInputStream getSequenceInputStream(String inKey, long pieceSize) throws IOException {
-        
+
         S3ObjectSequentialStream seqStream = new S3ObjectSequentialStream(s3, currentBucket, inKey, pieceSize);
-                
+
         return seqStream.getInputStream();
-        
+
     }
-    
+
     @Override
     public byte[] readBytes(String key, long start, long len) throws IOException {
-        GetObjectRequest gor = new GetObjectRequest(currentBucket, key)
-                                   .withRange(start, start + len - 1);
-        S3ObjectInputStream stream = s3.getObject(gor).getObjectContent();
-        byte[] bytes = stream.readAllBytes();
-        stream.close();
-        
-        return bytes;
+
+        GetObjectRequest gor = GetObjectRequest.builder()
+                                               .bucket(currentBucket)
+                                               .key(key)
+                                               .range("bytes=" + start + "-" + (start + len - 1))
+                                               .build();
+        try (InputStream stream = s3.getObject(gor)) {
+            return stream.readAllBytes();
+        }
     }
 
     @Override
@@ -246,19 +268,12 @@ public class S3HandlerImpl implements S3Handler {
     @Override
     public boolean deleteFile(String inKey) throws NuxeoException {
 
-        boolean ok = false;
         try {
-            s3.deleteObject(currentBucket, inKey);
-            ok = true;
-        } catch (AmazonServiceException ase) {
-            String message = S3Handler.buildDetailedMessageFromAWSException(ase);
-            throw new NuxeoException(message);
-
-        } catch (AmazonClientException ace) {
-            String message = S3Handler.buildDetailedMessageFromAWSException(ace);
-            throw new NuxeoException(message);
+            s3.deleteObject(b -> b.bucket(currentBucket).key(inKey));
+        } catch (SdkException se) {
+            throw new NuxeoException(S3Handler.buildDetailedMessageFromAWSException(se));
         }
-        return ok;
+        return true;
     }
 
     @Override
@@ -279,22 +294,25 @@ public class S3HandlerImpl implements S3Handler {
             throw new IllegalArgumentException("duration of " + durationInSeconds + " is invalid.");
         }
 
-        Date expiration = new Date();
-        expiration.setTime(expiration.getTime() + (durationInSeconds * 1000));
+        final String bucket = inBucket;
+        final Duration expiration = Duration.ofSeconds(durationInSeconds);
 
-        GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(currentBucket, inKey, HttpMethod.GET);
+        S3Presigner.Builder presignerBuilder = S3Presigner.builder()
+                                                          .region(Region.of(region))
+                                                          .credentialsProvider(credentialsProvider);
 
-        if (StringUtils.isNotBlank(contentType)) {
-            request.addRequestParameter("response-content-type", contentType);
-        }
-        if (StringUtils.isNotBlank(contentDisposition)) {
-            request.addRequestParameter("response-content-disposition", contentDisposition);
-        }
+        try (S3Presigner presigner = presignerBuilder.build()) {
+            java.net.URL url = presigner.presignGetObject(
+                    r -> r.signatureDuration(expiration).getObjectRequest(gor -> {
+                        gor.bucket(bucket).key(inKey);
+                        if (StringUtils.isNotBlank(contentType)) {
+                            gor.responseContentType(contentType);
+                        }
+                        if (StringUtils.isNotBlank(contentDisposition)) {
+                            gor.responseContentDisposition(contentDisposition);
+                        }
+                    })).url();
 
-        request.setExpiration(expiration);
-        URL url = s3.generatePresignedUrl(request);
-
-        try {
             URI uri = url.toURI();
             return uri.toString();
         } catch (URISyntaxException e) {
@@ -320,11 +338,11 @@ public class S3HandlerImpl implements S3Handler {
             inBucket = currentBucket;
         }
 
+        final String bucket = inBucket;
         try {
-            @SuppressWarnings("unused")
-            ObjectMetadata metadata = s3.getObjectMetadata(inBucket, inKey);
+            s3.headObject(b -> b.bucket(bucket).key(inKey));
             exists = true;
-        } catch (AmazonClientException e) {
+        } catch (SdkException e) {
             if (!S3Handler.errorIsMissingKey(e)) {
                 // Something else happened
                 exists = true;
@@ -362,31 +380,47 @@ public class S3HandlerImpl implements S3Handler {
     }
 
     @Override
-    public ObjectMetadata getObjectMetadata(String inKey) {
+    public HeadObjectResponse getObjectMetadata(String inKey) {
 
-        ObjectMetadata metadata;
         try {
-            metadata = s3.getObjectMetadata(currentBucket, inKey);
-        } catch (AmazonS3Exception e) {
+            HeadObjectRequest request = HeadObjectRequest.builder().bucket(currentBucket).key(inKey).build();
+            return s3.headObject(request);
+        } catch (S3Exception e) {
             throw new NuxeoException(
                     String.format("An error occured while getting key %s in AWS bucket %s", inKey, currentBucket), e);
         }
-
-        return metadata;
     }
 
     @Override
     public JsonNode getObjectMetadataJson(String inKey) throws JsonProcessingException {
 
-        ObjectMetadata metadata = getObjectMetadata(inKey);
+        HeadObjectResponse metadata = getObjectMetadata(inKey);
 
-        Map<String, Object> metadataMap = metadata.getRawMetadata();
-        Map<String, Object> mutableMap = new HashMap<String, Object>(metadataMap);
+        /*
+         * The AWS SDK v1 exposed ObjectMetadata#getRawMetadata(), a map keyed by HTTP header names. The v2
+         * HeadObjectResponse has no such map, so we rebuild it explicitly. The keys below are the ones the v1 SDK
+         * produced, so existing callers (automation chains reading "Content-Type", "Content-Length", "ETag", ...) keep
+         * working.
+         */
+        Map<String, Object> mutableMap = new HashMap<>();
+        putIfNotNull(mutableMap, "Content-Length", metadata.contentLength());
+        putIfNotNull(mutableMap, "Content-Type", metadata.contentType());
+        putIfNotNull(mutableMap, "ETag", cleanETag(metadata.eTag()));
+        putIfNotNull(mutableMap, "Content-Encoding", metadata.contentEncoding());
+        putIfNotNull(mutableMap, "Content-Disposition", metadata.contentDisposition());
+        putIfNotNull(mutableMap, "Content-Language", metadata.contentLanguage());
+        putIfNotNull(mutableMap, "Cache-Control", metadata.cacheControl());
+        putIfNotNull(mutableMap, "Last-Modified", metadata.lastModified() == null ? null : metadata.lastModified().toString());
+        putIfNotNull(mutableMap, "Expires", metadata.expiresString());
+        putIfNotNull(mutableMap, "x-amz-version-id", metadata.versionId());
+        putIfNotNull(mutableMap, "x-amz-storage-class",
+                metadata.storageClass() == null ? null : metadata.storageClassAsString());
+        putIfNotNull(mutableMap, "x-amz-server-side-encryption",
+                metadata.serverSideEncryption() == null ? null : metadata.serverSideEncryptionAsString());
+
         mutableMap.put("bucketName", currentBucket);
         mutableMap.put("objectKey", inKey);
-
-        Map<String, String> userMetadata = metadata.getUserMetadata();
-        mutableMap.put("userMetadata", userMetadata);
+        mutableMap.put("userMetadata", metadata.metadata() == null ? new HashMap<String, String>() : metadata.metadata());
 
         // Convert Map to JSON
         ObjectMapper objectMapper = new ObjectMapper();
@@ -404,7 +438,7 @@ public class S3HandlerImpl implements S3Handler {
     }
 
     @Override
-    public AmazonS3 getS3() {
+    public S3Client getS3() {
         return s3;
     }
 
@@ -416,6 +450,36 @@ public class S3HandlerImpl implements S3Handler {
     @Override
     public int getSignedUrlDuration() {
         return signedUrlDuration;
+    }
+
+    protected static void putIfNotNull(Map<String, Object> map, String key, Object value) {
+        if (value != null) {
+            map.put(key, value);
+        }
+    }
+
+    /**
+     * S3 returns the ETag surrounded by double quotes. Strip them, as the v1 SDK used to do.
+     *
+     * @since 2025.1
+     */
+    protected static String cleanETag(String eTag) {
+        if (eTag == null) {
+            return null;
+        }
+        return StringUtils.strip(eTag, "\"");
+    }
+
+    /*
+     * The transfer manager wraps every failure in a CompletionException. Get back to the real cause so that
+     * buildDetailedMessageFromAWSException can produce a useful message.
+     */
+    protected static Exception unwrap(CompletionException ce) {
+        Throwable cause = ce.getCause();
+        if (cause instanceof Exception e) {
+            return e;
+        }
+        return ce;
     }
 
 }

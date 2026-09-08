@@ -35,11 +35,11 @@ import java.util.Optional;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.nuxeo.common.file.FileCache;
 import org.nuxeo.common.file.LRUFileCache;
-import org.nuxeo.common.utils.SizeUtils;
+import org.nuxeo.common.utils.ByteSize;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.blobholder.BlobHolder;
 import org.nuxeo.ecm.core.api.blobholder.SimpleBlobHolder;
@@ -55,7 +55,7 @@ import org.nuxeo.ecm.platform.mimetype.interfaces.MimetypeRegistry;
 import org.nuxeo.ecm.platform.mimetype.service.MimetypeRegistryService;
 import org.nuxeo.runtime.api.Framework;
 
-import com.amazonaws.services.s3.model.ObjectMetadata;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 /**
  * A blob provider for handling S3 objects existing in other bucket than the one
@@ -95,7 +95,7 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
  */
 public class S3UtilsBlobProvider extends AbstractBlobProvider {
 
-    protected static final Log log = LogFactory.getLog(S3UtilsBlobProvider.class);
+    protected static final Logger log = LogManager.getLogger(S3UtilsBlobProvider.class);
 
     public static final String NO_DEFAULT_DOWNLOAD_ABOVE_PROPERTY = "noDefaultDownloadAbove"; // "1073741824"; //1024 * 1024 *
                                                                                      // 1024
@@ -133,7 +133,7 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
         String cacheCountStr = properties.getOrDefault(CACHE_COUNT_PROPERTY, "10000");
         String minAgeStr = properties.getOrDefault(CACHE_MIN_AGE_PROPERTY, "3600");
 
-        initializeCache(SizeUtils.parseSizeInBytes(cacheSizeStr), Long.parseLong(cacheCountStr),
+        initializeCache(ByteSize.parse(cacheSizeStr).bytes(), Long.parseLong(cacheCountStr),
                 Long.parseLong(minAgeStr));
 
         String maxForDefaultDownloadStr = properties.getOrDefault(NO_DEFAULT_DOWNLOAD_ABOVE_PROPERTY, "0");
@@ -254,12 +254,12 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
         BlobKey blobKey = new BlobKey(blobProviderId, blob.getKey(), s3Handler.getBucket());
         String objectKey = blobKey.getObjectKey();
 
-        ObjectMetadata metadata = s3Handler.getObjectMetadata(objectKey);
-        String etag = metadata.getETag();
+        HeadObjectResponse metadata = s3Handler.getObjectMetadata(objectKey);
+        String etag = S3HandlerImpl.cleanETag(metadata.eTag());
         File cachedFile = fileCache.getFile(etag);
         if (cachedFile == null) {
             File tmp = fileCache.getTempFile();
-            if (maxForDefaultDownload <= 0 || metadata.getContentLength() <= maxForDefaultDownload) {
+            if (maxForDefaultDownload <= 0 || metadata.contentLength() <= maxForDefaultDownload) {
                 /* Blob downloadedBlob = */s3Handler.downloadFile(objectKey, tmp);
             } else {
                 buildFileWithObjectInfo(objectKey, metadata, tmp);
@@ -303,31 +303,35 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
 
         BlobInfo info = new BlobInfo();
 
-        ObjectMetadata metadata = s3Handler.getObjectMetadata(objectKey);
+        HeadObjectResponse metadata = s3Handler.getObjectMetadata(objectKey);
         info.key = BlobKey.buildFullKey(blobProviderId, s3Handler.getBucket(), objectKey);
-        info.length = metadata.getContentLength();
-        info.digest = metadata.getContentMD5();
-        info.encoding = metadata.getContentEncoding();
-        info.mimeType = metadata.getContentType();
+        info.length = metadata.contentLength();
+        /*
+         * The AWS SDK v2 has no equivalent of the v1 ObjectMetadata#getContentMD5(), which was in practice almost
+         * always null on a HEAD response. We use the ETag instead, which is what the file cache already keys on.
+         */
+        info.digest = S3HandlerImpl.cleanETag(metadata.eTag());
+        info.encoding = metadata.contentEncoding();
+        info.mimeType = metadata.contentType();
         info.filename = FilenameUtils.getName(objectKey);
 
         return info;
 
     }
 
-    protected File buildFileWithObjectInfo(String objectKey, ObjectMetadata metadata, File toFile) throws IOException {
+    protected File buildFileWithObjectInfo(String objectKey, HeadObjectResponse metadata, File toFile) throws IOException {
 
         String text = "This file is beyond the max. size for download\n\n";
         text += FilenameUtils.getName(objectKey) + "\n";
-        text += FileUtils.byteCountToDisplaySize(metadata.getContentLength()) + "\n";
-        text += metadata.getContentType() + "\n";
+        text += FileUtils.byteCountToDisplaySize(metadata.contentLength()) + "\n";
+        text += metadata.contentType() + "\n";
 
         MimetypeRegistryService mimeTypeService = (MimetypeRegistryService) Framework.getService(
                 MimetypeRegistry.class);
-        Optional<String> mimeTypeOpt = mimeTypeService.getNormalizedMimeType(metadata.getContentType());
+        Optional<String> mimeTypeOpt = mimeTypeService.getNormalizedMimeType(metadata.contentType());
         String mimeType;
         if (mimeTypeOpt.isEmpty()) {
-            mimeType = metadata.getContentType();
+            mimeType = metadata.contentType();
         } else {
             mimeType = mimeTypeOpt.get();
         }
@@ -374,7 +378,7 @@ public class S3UtilsBlobProvider extends AbstractBlobProvider {
                     } catch (Exception e2) {
                         log.warn(String.format(
                                 "Could not generate a blob for object %s, content type %s, normalized to %s: Returning a simple string blob",
-                                objectKey, metadata.getContentType(), mimeType), e2);
+                                objectKey, metadata.contentType(), mimeType), e2);
                         converted = placeHolderBlob;
                     }
                 }

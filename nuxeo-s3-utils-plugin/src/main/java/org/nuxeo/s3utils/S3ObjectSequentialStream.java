@@ -21,13 +21,14 @@ package org.nuxeo.s3utils;
 import java.io.SequenceInputStream;
 import java.util.Enumeration;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 /**
  * Enumeration to be used in a java SequenceInputStream, for big object streaming, when streaming may lead to connection
@@ -61,11 +62,11 @@ import com.amazonaws.services.s3.model.S3ObjectInputStream;
  * 
  * @since 2021.35
  */
-public class S3ObjectSequentialStream implements Enumeration<S3ObjectInputStream> {
+public class S3ObjectSequentialStream implements Enumeration<ResponseInputStream<GetObjectResponse>> {
 
-    protected static final Log log = LogFactory.getLog(S3ObjectSequentialStream.class);
+    protected static final Logger log = LogManager.getLogger(S3ObjectSequentialStream.class);
 
-    protected AmazonS3 s3;
+    protected S3Client s3;
 
     protected String objectKey;
 
@@ -77,11 +78,11 @@ public class S3ObjectSequentialStream implements Enumeration<S3ObjectInputStream
 
     protected long pieceSize = S3Handler.DEFAULT_PIECE_SIZE;
 
-    public S3ObjectSequentialStream(AmazonS3 s3, String bucket, String objectKey) {
+    public S3ObjectSequentialStream(S3Client s3, String bucket, String objectKey) {
         this(s3, bucket, objectKey, 0);
     }
 
-    public S3ObjectSequentialStream(AmazonS3 s3, String bucket, String objectKey, long pieceSize) {
+    public S3ObjectSequentialStream(S3Client s3, String bucket, String objectKey, long pieceSize) {
 
         this.s3 = s3;
         this.bucket = bucket;
@@ -90,8 +91,8 @@ public class S3ObjectSequentialStream implements Enumeration<S3ObjectInputStream
             this.pieceSize = pieceSize;
         }
 
-        ObjectMetadata metadata = s3.getObjectMetadata(bucket, objectKey);
-        totalSize = metadata.getContentLength();
+        HeadObjectResponse metadata = s3.headObject(b -> b.bucket(bucket).key(objectKey));
+        totalSize = metadata.contentLength();
 
     }
 
@@ -101,15 +102,17 @@ public class S3ObjectSequentialStream implements Enumeration<S3ObjectInputStream
     }
 
     @Override
-    public S3ObjectInputStream nextElement() {
+    public ResponseInputStream<GetObjectResponse> nextElement() {
 
-        GetObjectRequest gor = new GetObjectRequest(bucket, objectKey).withRange(currentPosition,
-                currentPosition + pieceSize - 1);
+        GetObjectRequest gor = GetObjectRequest.builder()
+                                               .bucket(bucket)
+                                               .key(objectKey)
+                                               .range("bytes=" + currentPosition + "-"
+                                                       + (currentPosition + pieceSize - 1))
+                                               .build();
         currentPosition += pieceSize;
 
-        S3ObjectInputStream stream = s3.getObject(gor).getObjectContent();
-        
-        return stream;
+        return s3.getObject(gor);
     }
 
     public SequenceInputStream getInputStream() {

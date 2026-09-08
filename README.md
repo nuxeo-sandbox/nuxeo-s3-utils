@@ -6,6 +6,29 @@ This add-on for [Nuxeo](http://www.nuxeo.com) contains utilities for accessing o
 * *Operations* to upload or download a file, generate a temporary signed URL, etc.
 * *Custom blob provider* to handle objects on buckets that are not the Nuxeo binary bucket. They still get indexed, thumbnail calculated etc. Some important restriction though: The goal is to handle existing files in the bucket(s), so upload (update/creation) is not allowed. See below for details and extra features.
 
+# Compatibility
+
+| Plugin version | Nuxeo LTS | AWS SDK |
+| -------------- | --------- | ------- |
+| `2025.x`       | LTS 2025  | v2 (`software.amazon.awssdk`) |
+| `3.x`          | LTS 2023  | v1 (`com.amazonaws`) — see the `lts2023` branch |
+
+## Upgrading from 3.x (LTS 2023) to 2025.x
+
+LTS 2025 moved Nuxeo to the AWS SDK v2, so the Java API of this plugin had to follow. **XML contributions, `nuxeo.conf` parameters and automation operations are unchanged** — only Java callers are impacted:
+
+| Before (SDK v1) | Now (SDK v2) |
+| --------------- | ------------ |
+| `S3Handler.getS3()` returns `com.amazonaws.services.s3.AmazonS3` | returns `software.amazon.awssdk.services.s3.S3Client` |
+| `S3Handler.getObjectMetadata()` returns `ObjectMetadata` | returns `software.amazon.awssdk.services.s3.model.HeadObjectResponse` |
+| `S3Handler.errorIsMissingKey(AmazonClientException)` | `S3Handler.errorIsMissingKey(SdkException)` |
+| `S3ObjectSequentialStream implements Enumeration<S3ObjectInputStream>` | `implements Enumeration<ResponseInputStream<GetObjectResponse>>` |
+
+Two behaviour notes:
+
+* `S3UtilsBlobProvider` now sets the blob digest from the object **ETag**. The v1 code used `getContentMD5()`, which a `HEAD` response practically never returns (so the digest used to be `null` most of the time).
+* `minimumUploadPartSize` / `multipartUploadThreshold` set to `0` still means "use the AWS defaults", but the plugin now substitutes those defaults itself (5MB / 16MB) because the SDK v2 CRT client rejects `0`.
+
 # Table of Content
 - [Important: Encryption](#important-encryption)
 - [Set Up: Configuration](#set-up-configuration)
@@ -19,7 +42,7 @@ This add-on for [Nuxeo](http://www.nuxeo.com) contains utilities for accessing o
     * [S3Utils.Download](#s3utilsdownload)
     * [S3Utils.Delete](#s3utilsdelete)
     * [S3Utils.KeyExists](#s3utilskeyexists)
-    * [S3Utils.S3TempSignedUrlOp](#s3utilss3tempsignedurlop)
+    * [S3Utils.TempSignedUrl](#s3utilstempsignedurl)
     * [S3Utils.GetObjectMetadata](#s3utilsgetobjectmetadata)
     * [S3Utils.CreateBlobFromObjectKey](#s3utilscreateblobfromobjectkey)
     * [Import these Operations in your Project](#import-these-operations-in-your-project)
@@ -99,14 +122,14 @@ Replace the values with yours:
 * `bucket`: Required. The bucket to use for this S3 account.
 * `tempSignedUrlDuration`: Optional.
   * The duration, in seconds, of a temporary signed URL.
-  * If not passed or negative, a default value of 1200 (2 minutes) applies
+  * If not passed or negative, a default value of 1200 seconds (20 minutes) applies
 * `useCacheForExistsKey`: Optional.
   * pass `true` or `false`. Tell the plugin to use a cache when checking the existence of a key in the S3 bucket, to avoid calling S3 too often.
   * Default value is `false`
 * `minimumUploadPartSize` and `multipartUploadThreshold`
   * **These values must be set and cannot be empty**, or the start of Nuxeo will fail with a conversion error.
-  * The plugin uses Amazon S3 TransferManager to optimize uploads and perform a multipart upload when needed
-  * Set these values to `0` to use the default values (As in current AWS SDK, 5MB for `minimumUploadPartSize` and 16MB for `multipartUploadThreshold`)
+  * The plugin uses the AWS SDK v2 `S3TransferManager` (backed by the CRT async client) to optimize uploads and perform a multipart upload when needed
+  * Set these values to `0` to use the default values (5MB for `minimumUploadPartSize`, 16MB for `multipartUploadThreshold`). Since the SDK v2 CRT client rejects `0`, the plugin substitutes these defaults itself.
   * `minimumUploadPartSize`: AWS SDK JavaDoc: "Sets the minimum part size for upload parts. Decreasing the minimum part size will cause multipart uploads to be split into a larger number of smaller parts. Setting this value too low can have a negative effect on transfer speeds since it will cause extra latency and network communication for each part."
   * `multipartUploadThreshold `: AWS SDK JavaDoc: "Sets the size threshold, in bytes, for when to use multipart uploads. Uploads over this size will automatically use a multipart upload strategy, while uploads smaller than this threshold will use a single connection to upload the whole object."
   * The default values suit most of cases, but if you network allows for different settings and better performance, you can change the values.
@@ -256,7 +279,7 @@ The plugin contributes the following operations to be used in an Automation Chai
   * `bucket`: Optional. The bucket to use. *Notice*: For advanced usage, when configuring a handler with dynamic buckets (not hard coded in the configuration for example)
   * `useCache`: Optional, default is `false`. If the S3Handler has been configured to cache the results of KeyExists, it will first search in the cache. If you need to make 100% a key exists or not at the time of the call, ignore this parameter
 
-#### `S3Utils.S3TempSignedUrlOp`
+#### `S3Utils.TempSignedUrl`
 * Label: `Files > S3 Utils: Temp Signed URL`
 * Input is `void`, returns `void`
 * Sets a new context variable with the result: `s3UtilsTempSignedUrl`. It is a `String` variable, containing the temporary signed URL.
@@ -376,11 +399,11 @@ Please, see the code and its JavaDoc for details, `S3ObjectStreaming` interface 
 These features are not available without explicitly calling them in Java though. For example, Nuxeo BlobProvider interface does not handle streaming, so Nuxeo will never try to get a stream from a S3 blob. The purpose of these classes is to allow our prospects/customers (with Java dev. skills of course) to use this code, either as is (as a maven dependency), or by forking it or just copy/pasting the relevant part, to be included in their own plugin(s).
 
 #### Temporary Signed URL
-The `S3TempSignedURLBuilder` class lets you build a temporary signed URL to an S3 object. As you can see in the JavaDoc and/or in the source, you can get such URL passing just the distant object Key (which is, basically, its relative path). You can also use more parameters: The bucket, the duration (in seconds), the content-type and content-disposition.
+The `S3Handler#buildPresignedUrl` methods let you build a temporary signed URL to an S3 object. As you can see in the JavaDoc and/or in the source, you can get such URL passing just the distant object Key (which is, basically, its relative path). You can also use more parameters: The bucket, the duration (in seconds), the content-type and content-disposition.
 
 Content-Type and Content-Disposition should be used, especially if the distant object has no file extension.
 
-The class also has a utility to test the existence of a key on S3.
+`S3Handler` also has utilities to test the existence of a key on S3 (`existsKey`, `existsKeyInS3`).
 
 
 ## Build and Install

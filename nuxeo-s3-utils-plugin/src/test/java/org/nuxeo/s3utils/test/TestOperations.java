@@ -55,7 +55,7 @@ import org.nuxeo.s3utils.operations.S3KeyExistsOp;
 import org.nuxeo.s3utils.operations.S3TempSignedUrlOp;
 import org.nuxeo.s3utils.operations.S3UploadOp;
 
-import com.google.inject.Inject;
+import jakarta.inject.Inject;
 
 /**
  * See {@link SimpleFeatureCustom} for explanation about the local configuration

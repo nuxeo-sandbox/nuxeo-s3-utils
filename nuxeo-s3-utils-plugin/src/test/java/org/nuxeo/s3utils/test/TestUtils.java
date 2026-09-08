@@ -28,7 +28,10 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
@@ -38,7 +41,8 @@ import org.nuxeo.s3utils.Constants;
 import org.nuxeo.s3utils.S3Handler;
 import org.nuxeo.s3utils.S3UtilsBlobProvider;
 
-import com.amazonaws.SdkClientException;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.exception.SdkException;
 
 public class TestUtils {
 
@@ -63,13 +67,19 @@ public class TestUtils {
 
                 try {
                     // We don't care if the bucket does not exist, we check only credentials
-                    s3Handler.getS3().doesBucketExistV2(bucket);
+                    s3Handler.getS3().headBucket(b -> b.bucket(bucket));
                 } catch (SdkClientException e) {
-                    if (e.getMessage()
-                         .toLowerCase()
-                         .startsWith("Unable to load AWS credentials from any provider in the chain")) {
+                    /*
+                     * A SdkClientException (as opposed to a service exception) means the request never reached AWS.
+                     * Failing to resolve credentials is the case we care about here.
+                     */
+                    String message = e.getMessage() == null ? "" : e.getMessage().toLowerCase();
+                    if (message.contains("unable to load credentials")
+                            || message.contains("unable to load aws credentials")) {
                         credentialsLookOk = 0;
                     }
+                } catch (SdkException e) {
+                    // A service error (404 no such bucket, 403, ...) means the credentials were usable
                 }
             } else {
                 System.out.println("The local '" + SimpleFeatureCustom.TEST_CONF_FILE
@@ -101,20 +111,7 @@ public class TestUtils {
             String disposition = http.getHeaderField("Content-Disposition");
 
             if (disposition != null) {
-                // extracts file name from header field
-                int index = disposition.indexOf("filename=");
-                if (index > -1) {
-                    fileName = disposition.substring(index + 9);
-                } else {
-                    //attachment; filename*=UTF-8''content-for-unit-tests%2Fused-in-unit-test-do-not-change.pdf
-                    index = disposition.indexOf("filename*=");
-                    if(disposition.indexOf("filename*=") > -1) {
-                        index = disposition.lastIndexOf("%2F");
-                        if(index > 0) {
-                            fileName = disposition.substring(index + 3);
-                        }
-                    }
-                }
+                fileName = fileNameFromContentDisposition(disposition);
             } else {
                 // extracts file name from URL
                 fileName = url.substring(url.lastIndexOf("/") + 1, url.length());
@@ -143,6 +140,57 @@ public class TestUtils {
         }
 
         return resultFile;
+    }
+
+
+    /**
+     * Extracts the file name from a Content-Disposition header.
+     * <p>
+     * Since Nuxeo 2025.18, <code>RFC2231.encodeContentDisposition</code> follows RFC 6266 and emits <i>both</i>
+     * parameters when the name needs encoding:
+     *
+     * <pre>
+     * attachment; filename="a/b.pdf"; filename*=UTF-8''a%2Fb.pdf
+     * </pre>
+     *
+     * Older Nuxeo versions emitted only the <code>filename*</code> parameter. We read <code>filename*</code> first
+     * (it is the authoritative one per RFC 6266) and fall back to <code>filename</code>, then keep only the base
+     * name, since the object key can contain a path.
+     *
+     * @since 2025.1
+     */
+    protected static String fileNameFromContentDisposition(String disposition) {
+
+        String fileName = "";
+
+        int index = disposition.indexOf("filename*=");
+        if (index > -1) {
+            String value = disposition.substring(index + "filename*=".length()).trim();
+            // Cut at the next parameter, if any
+            int end = value.indexOf(';');
+            if (end > -1) {
+                value = value.substring(0, end);
+            }
+            // Strip the charset'language' prefix, ie. UTF-8''
+            int quote = value.lastIndexOf('\'');
+            if (quote > -1) {
+                value = value.substring(quote + 1);
+            }
+            fileName = URLDecoder.decode(value, StandardCharsets.UTF_8);
+        } else {
+            index = disposition.indexOf("filename=");
+            if (index > -1) {
+                String value = disposition.substring(index + "filename=".length()).trim();
+                int end = value.indexOf(';');
+                if (end > -1) {
+                    value = value.substring(0, end);
+                }
+                fileName = StringUtils.strip(value.trim(), "\"");
+            }
+        }
+
+        // The key may be a path, we only want the file name
+        return FilenameUtils.getName(fileName);
     }
 
     /**

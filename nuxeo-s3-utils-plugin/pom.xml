@@ -5,28 +5,28 @@
   <parent>
     <groupId>org.nuxeo.labs</groupId>
     <artifactId>nuxeo-s3-utils-parent</artifactId>
-    <version>3.2.1-SNAPSHOT</version>
+    <version>2025.1.0-SNAPSHOT</version>
   </parent>
   <artifactId>nuxeo-s3-utils-plugin</artifactId>
   <name>nuxeo-s3-utils-plugin</name>
   <description/>
   <dependencies>
-    <!-- AWS -->
+    <!-- AWS SDK v2 (versions come from the Nuxeo BOM) -->
     <dependency>
-      <groupId>com.amazonaws</groupId>
-      <artifactId>aws-java-sdk-core</artifactId>
-     <!--
-      <exclusions>
-        <exclusion>
-          <groupId>joda-time</groupId>
-          <artifactId>joda-time</artifactId>
-        </exclusion>
-      </exclusions>
-    -->
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>s3</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.amazonaws</groupId>
-      <artifactId>aws-java-sdk-s3</artifactId>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>apache-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>s3-transfer-manager</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk.crt</groupId>
+      <artifactId>aws-crt</artifactId>
     </dependency>
 
     <!-- Nuxeo -->
@@ -71,6 +71,23 @@
     </dependency>
     
     <!-- Test -->
+    <!--
+      AWS SDK v2 resolves SSO profiles only when these two modules are on the classpath (the v1 SDK did not need
+      them). Nuxeo itself does not ship them, because a server authenticates with an IAM role or static credentials.
+      They are needed here only so that a developer authenticated with `aws sso login` can run the tests.
+    -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>sso</artifactId>
+      <version>${aws.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>ssooidc</artifactId>
+      <version>${aws.version}</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
